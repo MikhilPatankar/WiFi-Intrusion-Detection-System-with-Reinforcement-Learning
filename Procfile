@@ -1,0 +1,1 @@
+web: python /usr/src/app/src/backend/main.py && streamlit run /usr/src/app/src/dashboard/dashboard.py

@@ -1,0 +1,13 @@
+{
+    "name": "WiFi Intrusion Detection System with Reinforcement Learning",
+    "description": "A WiFi Intrusion Detection System using Reinforcement Learning to detect and mitigate attacks on WiFi networks.",
+    "author": "Mikhil Patankar",
+    "repository": "https://github.com/MikhilPatankar/WiFi-Intrusion-Detection-System-with-Reinforcement-Learning",
+    "stack": "container",
+    "env": {
+      "PORT": {
+              "description": "Define PORT [int]",
+              "value": "8501"
+      }
+    }
+  }
