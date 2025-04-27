@@ -1,0 +1,39 @@
+# WIDS Project Requirements
+
+# --- Core Data Handling & Processing ---
+scapy>=2.5.0       # Packet manipulation and sniffing
+pandas>=1.5.0      # Data manipulation and analysis (DataFrames)
+numpy>=1.21.0      # Numerical operations
+
+# --- Machine Learning & Reinforcement Learning ---
+stable-baselines3[extra]>=2.0.0 # RL algorithms (includes Gymnasium, PyTorch, TensorBoard support)
+# torch>=2.0.0     # PyTorch (dependency of Stable Baselines 3 - often installed automatically)
+# gymnasium>=0.28.0 # RL environment standard API (dependency of SB3)
+scikit-learn>=1.1.0 # For preprocessing (scalers, encoders) and ML utilities
+joblib>=1.1.0      # For saving/loading Python objects (like scalers)
+
+# --- Backend API (FastAPI) ---
+fastapi[all]>=0.100.0 # FastAPI framework with all optional dependencies (incl. Uvicorn, Pydantic v1/v2 compat)
+uvicorn>=0.22.0    # ASGI server (often included with fastapi[all])
+pydantic-settings>=2.0.0 # For loading settings (replaces pydantic.BaseSettings in Pydantic v2)
+sqlmodel>=0.0.14     # ORM combining Pydantic and SQLAlchemy
+sqlalchemy>=2.0.0    # Core ORM library (required by SQLModel)
+# Choose appropriate async database driver(s):
+aiosqlite>=0.19.0    # Async driver for SQLite
+# asyncpg>=0.27.0    # Async driver for PostgreSQL (uncomment if using PostgreSQL)
+# psycopg2-binary>=2.9.0 # Sync driver for PostgreSQL (needed for tools like Alembic, uncomment if using)
+python-dotenv>=1.0.0 # For loading environment variables from .env files (optional)
+
+# --- Frontend Dashboard (Streamlit) ---
+streamlit>=1.25.0    # Dashboard framework
+requests>=2.28.0     # For making HTTP requests from dashboard to backend API
+# If using Plotly/Dash instead of/with Streamlit:
+# plotly>=5.10.0
+# dash>=2.10.0
+
+# --- Development & Testing ---
+pytest>=7.0.0      # Testing framework (optional, but recommended)
+watchfiles>=0.18.0 # For FastAPI auto-reload during development (optional)
+
+# Note: Specific versions are examples. Adjust based on compatibility needs.
+# Run 'pip freeze > requirements.txt' in your final environment to capture exact versions.
