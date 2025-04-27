@@ -19,7 +19,7 @@ class DashboardSettings(BaseSettings):
     APP_NAME: str = "WIDS Dashboard"
     # --- Authentication Settings ---
     # IMPORTANT: Use a strong, randomly generated secret key
-    AUTH_SECRET_KEY: str = os.getenv("DASHBOARD_AUTH_SECRET_KEY", "change-this-super-secret-dashboard-key")
+    AUTH_SECRET_KEY: str = os.getenv("DASHBOARD_AUTH_SECRET_KEY", "8s44984vs684v68s4vf48aw44v8d44")
     AUTH_ALGORITHM: str = "HS256"
     AUTH_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30 # Token validity duration
 

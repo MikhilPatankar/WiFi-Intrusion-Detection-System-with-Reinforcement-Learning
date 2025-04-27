@@ -5,7 +5,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 import logging
 from typing import List
-from ..models import EventLabel, LabelUpdateResult, EventLogRead, EventLogReadList
+from ..models import EventLabel, LabelUpdateResult, EventLogRead, EventLogReadList, EventStats, TimeSeriesData # Added TimeSeriesData
 from ..services import log_service
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..db import get_async_session
@@ -39,3 +39,35 @@ async def label_event(label_data: EventLabel, db: AsyncSession = Depends(get_asy
         return LabelUpdateResult(status="success", event_uid=updated_event.event_uid, assigned_label=updated_event.human_label)
     except HTTPException: raise
     except Exception as e: logging.error(f"Error labeling event {label_data.event_uid}: {e}", exc_info=True); raise HTTPException(status_code=500, detail="Failed to label event.")
+
+
+# --- NEW Stats Endpoint ---
+@router.get("/stats", response_model=EventStats)
+async def get_stats(db: AsyncSession = Depends(get_async_session)):
+    """Retrieve aggregated statistics about logged events."""
+    logging.info("Request received for event statistics.")
+    try:
+        stats = await log_service.get_event_statistics(db)
+        return stats
+    except Exception as e:
+        logging.error(f"Failed to get event statistics: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not retrieve event statistics.")
+
+# --- NEW Time Series Endpoint ---
+@router.get("/timeseries", response_model=TimeSeriesData)
+async def get_timeseries_data(
+    interval: str = Query("hour", enum=["hour", "day"], description="Aggregation interval"),
+    hours_ago: int = Query(24, ge=1, le=7*24, description="How many hours of data to include"), # Limit history e.g., 7 days
+    db: AsyncSession = Depends(get_async_session)
+):
+    """Retrieve time series data for event counts."""
+    logging.info(f"Request for time series data: interval={interval}, hours_ago={hours_ago}")
+    try:
+        timeseries = await log_service.get_event_timeseries(db, interval=interval, hours_ago=hours_ago)
+        return timeseries
+    except ValueError as e: # Catch invalid interval
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logging.error(f"Failed to get time series data: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not retrieve time series data.")
+# --- End NEW ---

@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}WIDS Monitoring{% endblock %}
+
+{% block content %}
+<section id="homeSection" class="dashboard-section active"> {# Mark as active #}
+    <div class="page-header">
+        <h1 class="h2">Monitoring Overview</h1>
+    </div>
+    <div class="row g-4 mb-4" id="statsCards">
+        <div class="col-6 col-md-4 col-xl-2"><div class="card stat-card"><div class="card-body placeholder-glow"><div class="stat-icon text-secondary"><i class="bi bi-hdd-stack"></i></div><div class="stat-value placeholder" id="statTotalEvents">0</div><div class="stat-label">Total Events</div></div></div></div>
+        <div class="col-6 col-md-4 col-xl-2"><div class="card stat-card"><div class="card-body placeholder-glow"><div class="stat-icon text-danger"><i class="bi bi-bug"></i></div><div class="stat-value placeholder text-danger" id="statTotalAnomalies">0</div><div class="stat-label">Total Anomalies</div></div></div></div>
+        <div class="col-6 col-md-4 col-xl-2"><div class="card stat-card"><div class="card-body placeholder-glow"><div class="stat-icon text-danger"><i class="bi bi-clock-history"></i></div><div class="stat-value placeholder text-danger" id="statAnomalies24h">0</div><div class="stat-label">Anomalies (24h)</div></div></div></div>
+        <div class="col-6 col-md-4 col-xl-2"><div class="card stat-card"><div class="card-body placeholder-glow"><div class="stat-icon text-danger"><i class="bi bi-clock"></i></div><div class="stat-value placeholder text-danger" id="statAnomalies1h">0</div><div class="stat-label">Anomalies (1h)</div></div></div></div>
+        <div class="col-6 col-md-4 col-xl-2"><div class="card stat-card"><div class="card-body placeholder-glow"><div class="stat-icon text-warning"><i class="bi bi-question-circle"></i></div><div class="stat-value placeholder text-warning" id="statUnlabeled">0</div><div class="stat-label">Unlabeled</div></div></div></div>
+        <div class="col-6 col-md-4 col-xl-2"><div class="card stat-card"><div class="card-body placeholder-glow"><div class="stat-icon text-info"><i class="bi bi-check-circle"></i></div><div class="stat-value placeholder text-info" id="statLabeled">0</div><div class="stat-label">Labeled</div></div></div></div>
+    </div>
+    <div class="row g-4">
+        <div class="col-lg-12 mb-4"> {# Make time series chart full width #}
+             <div class="chart-card">
+                 <h5 class="card-title text-center mb-3">Events Over Time (Last 24 Hours)</h5>
+                 <div class="chart-container" style="height: 250px;"> {# Slightly smaller height #}
+                     <canvas id="timeSeriesChart"></canvas>
+                 </div>
+                 <div id="timeSeriesError" class="text-center text-danger small mt-2 d-none"></div>
+             </div>
+        </div>
+        <div class="col-lg-6">
+             <div class="chart-card">
+                 <h5 class="card-title text-center mb-3">Prediction Distribution</h5>
+                 <div class="chart-container"> <canvas id="predictionChart"></canvas> </div>
+             </div>
+        </div>
+        <div class="col-lg-6">
+             <div class="chart-card">
+                 <h5 class="card-title text-center mb-3">Label Distribution</h5>
+                 <div class="chart-container"> <canvas id="labelChart"></canvas> </div>
+             </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+    {# Page-specific JavaScript for Home/Monitoring #}
+    <script>
+        // --- DOM Elements (Specific to Home) ---
+        const statsCardsContainer = document.getElementById('statsCards');
+        const predictionChartCtx = document.getElementById('predictionChart')?.getContext('2d');
+        const labelChartCtx = document.getElementById('labelChart')?.getContext('2d');
+        const timeSeriesChartCtx = document.getElementById('timeSeriesChart')?.getContext('2d'); // New chart
+        const timeSeriesError = document.getElementById('timeSeriesError'); // Error display for time series
+
+        // Stat value elements
+        const statElements = {
+            totalEvents: document.getElementById('statTotalEvents'),
+            totalAnomalies: document.getElementById('statTotalAnomalies'),
+            anomalies24h: document.getElementById('statAnomalies24h'),
+            anomalies1h: document.getElementById('statAnomalies1h'),
+            unlabeled: document.getElementById('statUnlabeled'),
+            labeled: document.getElementById('statLabeled'),
+        };
+
+        // --- Chart Instances & State ---
+        let predictionChart = null;
+        let labelChart = null;
+        let timeSeriesChart = null; // New chart instance
+        let currentStatsData = null;
+        let currentTimeSeriesData = null;
+        let isFetchingStats = false;
+        let isFetchingTimeSeries = false;
+
+        // --- API Endpoints ---
+        const STATS_ENDPOINT = `${WIDS_API_BASE_URL}/events/stats`;
+        const TIMESERIES_ENDPOINT = `${WIDS_API_BASE_URL}/events/timeseries?interval=hour&hours_ago=24`; // Fetch hourly for last 24h
+
+        // --- Rendering Functions ---
+        function renderStats(stats) {
+            if (!stats) {
+                Object.values(statElements).forEach(el => { if(el) el.textContent = '-'; });
+                return;
+             }
+            currentStatsData = stats; // Update state
+
+            // Update stat card values
+            if(statElements.totalEvents) statElements.totalEvents.textContent = stats.total_events ?? 0;
+            if(statElements.totalAnomalies) statElements.totalAnomalies.textContent = stats.anomaly_count ?? 0;
+            if(statElements.anomalies24h) statElements.anomalies24h.textContent = stats.anomalies_last_24h ?? 0;
+            if(statElements.anomalies1h) statElements.anomalies1h.textContent = stats.anomalies_last_hour ?? 0;
+            if(statElements.unlabeled) statElements.unlabeled.textContent = stats.unlabeled_count ?? 0;
+            if(statElements.labeled) statElements.labeled.textContent = stats.labeled_count ?? 0;
+
+            // Remove placeholder styles after rendering
+            document.querySelectorAll('#statsCards .placeholder').forEach(el => el.classList.remove('placeholder', 'placeholder-glow'));
+
+            renderPredictionChart(stats);
+            renderLabelChart(stats);
+        }
+
+        function renderPredictionChart(stats) { /* ... (Same logic as before) ... */ }
+        function renderLabelChart(stats) { /* ... (Same logic as before) ... */ }
+
+        // --- NEW Time Series Chart Rendering ---
+        function renderTimeSeriesChart(tsData) {
+            if (!timeSeriesChartCtx || !tsData || !tsData.data_points) {
+                console.warn("Time series chart canvas or data not available.");
+                if(timeSeriesError) timeSeriesError.textContent = "Could not render time series chart.";
+                timeSeriesError?.classList.remove('d-none');
+                return;
+            }
+             if(timeSeriesError) timeSeriesError.classList.add('d-none'); // Hide error if data is ok
+
+            const labels = tsData.data_points.map(p => formatTimestamp(p.time_bucket)); // Use formatted timestamp for labels
+            const anomalyData = tsData.data_points.map(p => p.anomaly_count);
+            const normalData = tsData.data_points.map(p => p.normal_count);
+
+            const data = {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Anomalies',
+                        data: anomalyData,
+                        borderColor: 'rgba(220, 53, 69, 0.8)', // Red
+                        backgroundColor: 'rgba(220, 53, 69, 0.2)',
+                        fill: true,
+                        tension: 0.3, // Smoother line
+                        pointRadius: 2,
+                        pointBackgroundColor: 'rgba(220, 53, 69, 1)'
+                    },
+                    {
+                        label: 'Normal',
+                        data: normalData,
+                        borderColor: 'rgba(40, 167, 69, 0.8)', // Green
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 2,
+                        pointBackgroundColor: 'rgba(40, 167, 69, 1)'
+                    }
+                ]
+            };
+
+            const options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        ticks: { color: '#adb5bd', maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }, // Limit ticks
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { color: '#adb5bd' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    }
+                },
+                plugins: {
+                    legend: { position: 'top', labels: { color: '#adb5bd', padding: 15 } },
+                    tooltip: { enabled: true }
+                },
+                interaction: { // Improve tooltip interaction
+                    mode: 'index',
+                    intersect: false,
+                },
+            };
+
+            if (timeSeriesChart) timeSeriesChart.destroy();
+            timeSeriesChart = new Chart(timeSeriesChartCtx, { type: 'line', data: data, options: options });
+        }
+        // --- End NEW ---
+
+
+        // --- Data Fetching ---
+        async function fetchStats() {
+            if (isFetchingStats) return;
+            isFetchingStats = true;
+            // Use placeholders for loading state on cards
+            document.querySelectorAll('#statsCards .placeholder').forEach(el => {
+                el.classList.add('placeholder-glow');
+                if (!el.classList.contains('placeholder')) el.classList.add('placeholder'); // Ensure placeholder class exists
+            });
+            hideError();
+            setApiStatus('warning', 'Fetching Stats...');
+            try {
+                const statsData = await fetchApi(STATS_ENDPOINT, {}, 'isFetchingStats');
+                renderStats(statsData);
+            } catch (error) {
+                renderStats(null); // Clear stats on error
+            } finally {
+                isFetchingStats = false;
+                // Ensure placeholders are removed even if rendering failed partially
+                 document.querySelectorAll('#statsCards .placeholder').forEach(el => el.classList.remove('placeholder', 'placeholder-glow'));
+            }
+        }
+
+        // --- NEW Time Series Fetch ---
+        async function fetchTimeSeries() {
+            if (isFetchingTimeSeries) return;
+            isFetchingTimeSeries = true;
+             if(timeSeriesError) timeSeriesError.classList.add('d-none'); // Hide previous error
+            // Don't show global loading, maybe a chart-specific one later
+             setApiStatus('warning', 'Fetching Time Series...');
+            try {
+                const tsData = await fetchApi(TIMESERIES_ENDPOINT, {}, 'isFetchingTimeSeries');
+                currentTimeSeriesData = tsData;
+                renderTimeSeriesChart(tsData);
+            } catch (error) {
+                 if(timeSeriesError) timeSeriesError.textContent = `Error loading time series: ${error.message}`;
+                 timeSeriesError?.classList.remove('d-none');
+                 renderTimeSeriesChart(null); // Clear chart
+            } finally {
+                isFetchingTimeSeries = false;
+            }
+        }
+        // --- End NEW ---
+
+        // Combined fetch for home page
+        function fetchHomePageData() {
+            fetchStats();
+            fetchTimeSeries();
+        }
+
+        // --- Event Listeners ---
+        refreshButton?.addEventListener('click', () => {
+            // Refresh data relevant to the currently active page (assumed from context)
+             console.log("Refresh clicked on home page");
+             fetchHomePageData(); // Refresh both stats and time series
+        });
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchHomePageData(); // Fetch initial data for home page
+        });
+    </script>
+{% endblock %}
+

@@ -50,7 +50,7 @@ DASHBOARD_USERS_DB = {
         "username": "dashadmin",
         "full_name": "Dashboard Admin",
         # Hash for "dashboardpassword"
-        "hashed_password": "$2b$12$GzL8O0.1gJ9Gk8Xz9lY1fO.5hQkL9y7tW3zP2jK1mN0bV4aS7cD8q",
+        "hashed_password": "$2b$12$FsqcccgbiRjcHhR2KxJxbuiy3F8p6pLVer2oUvSjVwnQKepTB2m2u",
         "disabled": False,
     }
 }

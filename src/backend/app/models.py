@@ -3,7 +3,7 @@
 # Change: Use List[Any] or list for features_data in API models
 
 from pydantic import BaseModel, Field
-from typing import List, Optional, Any, Union # Import Union if needed elsewhere
+from typing import List, Dict, Optional, Any, Union # Import Union if needed elsewhere
 import datetime
 
 # --- Request/Input Models ---
@@ -54,3 +54,27 @@ class EventLogReadList(BaseModel):
     total_count: int
     events: List[EventLogRead]
 
+
+class EventStats(BaseModel):
+    """Model for returning event statistics."""
+    total_events: int = 0
+    anomaly_count: int = 0
+    normal_count: int = 0
+    labeled_count: int = 0
+    unlabeled_count: int = 0
+    # --- NEW Time-based Stats ---
+    anomalies_last_hour: int = 0
+    anomalies_last_24h: int = 0
+    # --- End NEW ---
+    label_distribution: Dict[str, int] = {}
+
+# --- NEW Time Series Models ---
+class TimeSeriesPoint(BaseModel):
+    time_bucket: datetime.datetime # Start time of the bucket
+    anomaly_count: int = 0
+    normal_count: int = 0
+
+class TimeSeriesData(BaseModel):
+    interval: str # e.g., "hour", "day"
+    data_points: List[TimeSeriesPoint] = []
+# --- End NEW ---
