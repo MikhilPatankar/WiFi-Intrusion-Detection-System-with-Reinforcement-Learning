@@ -1,0 +1,17 @@
+# Requirements for the WIDS Dashboard FastAPI Application
+
+fastapi[all]>=0.100.0
+uvicorn>=0.22.0
+pydantic-settings>=2.0.0
+jinja2>=3.1.0
+python-multipart>=0.0.7 # For login form data
+passlib[bcrypt]>=1.7.4  # For password hashing
+python-jose[cryptography]>=3.3.0 # For JWT handling (alternative to PyJWT, often used with FastAPI examples)
+# OR use PyJWT:
+# pyjwt>=2.8.0
+
+# Optional, if you add backend calls from Python side (less common if JS handles it)
+# requests>=2.28.0
+
+# Development
+watchfiles>=0.18.0 # Optional for reload
