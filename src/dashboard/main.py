@@ -16,6 +16,8 @@ from app.routers.auth import require_dashboard_user # Import the dependency
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+PORT = int(os.environ.get("PORT", 8050))
+
 # Configure Jinja2 Templates
 templates = Jinja2Templates(directory=settings.TEMPLATES_DIR)
 logging.info(f"Dashboard Templates directory: {settings.TEMPLATES_DIR}")
@@ -97,7 +99,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8050,      # Run dashboard on DIFFERENT port (e.g., 8050)
+        port=PORT,      # Run dashboard on DIFFERENT port (e.g., 8050)
         reload=True,
         log_level="info"
     )
