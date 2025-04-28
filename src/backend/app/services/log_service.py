@@ -7,24 +7,40 @@ import logging
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..schemas import EventLog
-from ..models import EventLogCreate, EventLabel, EventStats, TimeSeriesPoint, TimeSeriesData # Added models
-from sqlalchemy import desc, func, case, text # Added text for raw SQL/functions
+from ..models import EventLogCreate, EventLabel, EventStats, TimeSeriesPoint, TimeSeriesData, EventLogRead # Added EventLogRead
+from sqlalchemy import desc, func, case, text
 from typing import List, Dict
 import numpy as np
 import datetime
-from datetime import timedelta # Added timedelta
+from datetime import timedelta
+from ..broadcast import broadcast # Import the shared broadcaster instance
+import json # Import json for serialization
 
+
+# Channel name for broadcasting events
+EVENT_CHANNEL = "wids-events"
 
 async def create_event_log(db: AsyncSession, event_data: EventLogCreate) -> EventLog:
+    """Creates log entry and publishes it to the broadcast channel."""
     try:
-        log_features = event_data.features_data # Already typed as 'list' in EventLogCreate
-        # Create EventLog instance using the input data
-        # The features_data (list) will be serialized by JSONType
         db_event = EventLog(**event_data.dict())
         db.add(db_event); await db.commit(); await db.refresh(db_event)
-        logging.info(f"Created event log with UID: {db_event.event_uid}")
+        logging.info(f"Created event log: {db_event.event_uid}")
+
+        # --- Publish the new event ---
+        try:
+            # Convert the ORM model to a Pydantic model for serialization
+            event_to_publish = EventLogRead.from_orm(db_event)
+            # Publish as a JSON string
+            await broadcast.publish(channel=EVENT_CHANNEL, message=event_to_publish.json())
+            logging.info(f"Published event {db_event.event_uid} to channel '{EVENT_CHANNEL}'")
+        except Exception as pub_err:
+            # Log publishing error but don't fail the whole operation
+            logging.error(f"Failed to publish event {db_event.event_uid}: {pub_err}", exc_info=True)
+        # --- End Publish ---
+
         return db_event
-    except Exception as e: await db.rollback(); logging.error(f"Error creating event log: {e}", exc_info=True); raise
+    except Exception as e: await db.rollback(); logging.error(f"Error creating event log: {e}"); raise
 
 async def get_event_log_by_uid(db: AsyncSession, event_uid: str) -> EventLog | None:
     try: result = await db.execute(select(EventLog).where(EventLog.event_uid == event_uid)); return result.scalars().first()

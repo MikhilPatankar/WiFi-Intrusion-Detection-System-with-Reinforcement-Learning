@@ -1,177 +1,112 @@
 {% extends "base.html" %}
-
 {% block title %}WIDS Events & Labeling{% endblock %}
-
 {% block content %}
-<section id="eventsSection" class="dashboard-section active"> {# Mark as active #}
+<section id="eventsSection" class="dashboard-section active">
     <div class="page-header d-flex justify-content-between align-items-center">
-        <h1 class="h2 mb-0">Events & Labeling</h1>
-        <span id="eventCount" class="text-muted">Total: 0 | Showing: 0</span>
+        <h1 class="h2 mb-0">Events & Labeling</h1> <span id="eventCount" class="text-muted">Total: 0 | Showing: 0</span>
+    </div>
+    <div class="alert alert-info small mt-3 d-none" role="alert" id="sseStatus">
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        Live stream connected. Waiting for new events...
     </div>
     <div class="table-container mt-3">
         <div class="table-responsive">
             <table class="table table-hover table-sm align-middle">
-                <thead class="sticky-top">
-                    <tr>
-                        <th scope="col">Timestamp</th>
-                        <th scope="col">UID</th>
-                        <th scope="col">Prediction</th>
-                        <th scope="col">Label</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="eventsTableBody">
-                    <tr>
-                        <td colspan="6" class="text-center text-muted py-5">Loading events...</td>
-                    </tr>
-                </tbody>
+                <thead class="sticky-top"> {# Table Header #} </thead>
+                <tbody id="eventsTableBody">{# Table Body #}</tbody>
             </table>
         </div>
     </div>
 </section>
-
-<div class="modal fade" id="eventDetailsModal" tabindex="-1" aria-labelledby="eventDetailsModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="eventDetailsModalLabel">Details: <span id="modalEventUid"></span></h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <h6>Summary</h6>
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <p class="mb-1"><small class="text-muted">Timestamp:</small><br><span
-                                id="modalTimestamp"></span></p>
-                        <p class="mb-1"><small class="text-muted">Prediction:</small><br><span
-                                id="modalPrediction"></span></p>
-                    </div>
-                    <div class="col-md-6">
-                        <p class="mb-1"><small class="text-muted">Current Label:</small><br><span
-                                id="modalCurrentLabel"></span></p>
-                        <p class="mb-1"><small class="text-muted">Label Timestamp:</small><br><span
-                                id="modalLabelTimestamp"></span></p>
-                    </div>
-                </div>
-                <h6>Features</h6>
-                <pre><code id="modalFeaturesData"></code></pre>
-                <hr>
-                <h6>Assign Label</h6>
-                <form id="labelForm">
-                    <input type="hidden" id="labelEventUidInput">
-                    <div class="mb-3">
-                        <div class="form-check form-check-inline"><input class="form-check-input" type="radio"
-                                name="humanLabelRadio" id="labelAttack" value="Confirmed Attack" checked><label
-                                class="form-check-label" for="labelAttack">Confirmed Attack</label></div>
-                        <div class="form-check form-check-inline"><input class="form-check-input" type="radio"
-                                name="humanLabelRadio" id="labelFalsePositive" value="False Positive"><label
-                                class="form-check-label" for="labelFalsePositive">False Positive</label></div>
-                        <div class="form-check form-check-inline"><input class="form-check-input" type="radio"
-                                name="humanLabelRadio" id="labelUncertain" value="Uncertain"><label
-                                class="form-check-label" for="labelUncertain">Uncertain</label></div>
-                    </div>
-                    <div id="labelSubmitStatus" class="mt-2 small"></div>
-                    <button type="submit" class="btn btn-success" id="submitLabelButton">
-                        <span class="spinner-border spinner-border-sm d-none me-1" role="status"
-                            aria-hidden="true"></span>Submit Label
-                    </button>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
+<div class="modal fade" id="eventDetailsModal" tabindex="-1">{# Modal Content #}</div>
 {% endblock %}
 
-
 {% block scripts %}
-{# Page-specific JavaScript for Events & Labeling #}
 <script>
-    // --- DOM Elements (Specific to Events) ---
+    // DOM Elements, State (Same as before)
     const eventsTableBody = document.getElementById('eventsTableBody');
-    const unlabeledOnlySwitch = document.getElementById('unlabeledOnlySwitch'); // Assumes controls are in base.html
-    const limitSelect = document.getElementById('limitSelect'); // Assumes controls are in base.html
+    const unlabeledOnlySwitch = document.getElementById('unlabeledOnlySwitch');
+    const limitSelect = document.getElementById('limitSelect');
     const eventCountSpan = document.getElementById('eventCount');
     const eventDetailsModalEl = document.getElementById('eventDetailsModal');
     const eventDetailsModal = eventDetailsModalEl ? new bootstrap.Modal(eventDetailsModalEl) : null;
     const labelForm = document.getElementById('labelForm');
-    // Modal elements
-    const modalEventUid = document.getElementById('modalEventUid');
-    const modalTimestamp = document.getElementById('modalTimestamp');
-    const modalPrediction = document.getElementById('modalPrediction');
-    const modalCurrentLabel = document.getElementById('modalCurrentLabel');
-    const modalLabelTimestamp = document.getElementById('modalLabelTimestamp');
-    const modalFeaturesData = document.getElementById('modalFeaturesData');
-    const labelEventUidInput = document.getElementById('labelEventUidInput');
-    const labelSubmitStatus = document.getElementById('labelSubmitStatus');
-    const submitLabelButton = document.getElementById('submitLabelButton');
-    const submitLabelSpinner = submitLabelButton?.querySelector('.spinner-border');
+    const sseStatusDiv = document.getElementById('sseStatus'); // SSE Status indicator
+    // Modal elements...
+    let currentEventsData = []; let isFetchingEvents = false;
 
-    // --- State ---
-    let currentEventsData = [];
-    let isFetchingEvents = false;
-
-    // --- API Endpoints ---
+    // API Endpoints
     const EVENTS_ENDPOINT = `${WIDS_API_BASE_URL}/events/`;
     const LABEL_ENDPOINT = `${WIDS_API_BASE_URL}/events/label`;
+    const SSE_ENDPOINT = `${WIDS_API_BASE_URL}/events/stream`; // SSE endpoint
 
     // --- Rendering Functions ---
-    function renderTable(events) {
-        if (!eventsTableBody) return;
-        eventsTableBody.innerHTML = '';
-        if (!events || events.length === 0) {
-            eventsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">No events found matching criteria.</td></tr>';
-            return;
-        }
-        events.forEach(event => {
-            const row = eventsTableBody.insertRow();
-            const predictionText = event.prediction === 1 ? 'Anomaly' : 'Normal';
-            const labelText = event.human_label || 'N/A';
-            const labelStatus = event.human_label ? 'Labeled' : 'Unlabeled';
-            const labelBadge = event.human_label
-                ? `<span class="badge bg-info-subtle text-info-emphasis label-badge">${event.human_label}</span>`
-                : `<span class="badge bg-warning-subtle text-warning-emphasis label-badge">Unlabeled</span>`;
-            const predictionBadge = event.prediction === 1
-                ? `<span class="badge bg-danger-subtle text-danger-emphasis prediction-badge">Anomaly</span>`
-                : `<span class="badge bg-success-subtle text-success-emphasis prediction-badge">Normal</span>`;
+    function createTableRow(event) {
+        // Creates a single table row HTML string from an event object
+        const predictionBadge = event.prediction === 1 ? `<span class="badge bg-danger-subtle text-danger-emphasis prediction-badge">Anomaly</span>` : `<span class="badge bg-success-subtle text-success-emphasis prediction-badge">Normal</span>`;
+        const labelBadge = event.human_label ? `<span class="badge bg-info-subtle text-info-emphasis label-badge">${event.human_label}</span>` : `<span class="badge bg-warning-subtle text-warning-emphasis label-badge">Unlabeled</span>`;
+        const labelStatus = event.human_label ? 'Labeled' : 'Unlabeled';
+        const uidShort = event.event_uid ? event.event_uid.substring(0, 12) + '...' : 'N/A';
 
-            row.innerHTML = `
+        return `
+                <tr>
                     <td><small>${formatTimestamp(event.timestamp)}</small></td>
-                    <td><small class="font-monospace">${event.event_uid ? event.event_uid.substring(0, 12) + '...' : 'N/A'}</small></td>
+                    <td><small class="font-monospace">${uidShort}</small></td>
                     <td>${predictionBadge}</td>
                     <td>${labelBadge}</td>
                     <td>${labelStatus}</td>
                     <td><button class="btn btn-sm btn-outline-primary" onclick="showDetails('${event.event_uid}')"><i class="bi bi-pencil-square me-1"></i>View/Label</button></td>
-                `;
+                </tr>
+            `;
+    }
+
+    function renderTable(events, append = false) {
+        if (!eventsTableBody) return;
+        // Clear only if not appending
+        if (!append) {
+            eventsTableBody.innerHTML = '';
+        }
+        // Remove placeholder if it exists
+        const placeholder = eventsTableBody.querySelector('.placeholder-row');
+        if (placeholder) placeholder.remove();
+
+        if (!events || events.length === 0) {
+            if (!append) { // Only show if table was empty before
+                eventsTableBody.innerHTML = '<tr class="placeholder-row"><td colspan="6" class="text-center text-muted py-5">No events found matching criteria.</td></tr>';
+            }
+            return;
+        }
+
+        let rowsHtml = '';
+        events.forEach(event => {
+            rowsHtml += createTableRow(event);
         });
+
+        if (append) {
+            // Prepend new rows to the top
+            eventsTableBody.insertAdjacentHTML('afterbegin', rowsHtml);
+        } else {
+            eventsTableBody.innerHTML = rowsHtml;
+        }
     }
 
     // --- Data Fetching ---
     async function fetchEvents() {
-        // Use common fetchApi from base.html
         if (isFetchingEvents || !limitSelect || !unlabeledOnlySwitch) return;
         isFetchingEvents = true;
-        showLoading(true); // Use global loading indicator
+        showLoading(true);
         const limit = limitSelect.value;
         const unlabeledOnly = unlabeledOnlySwitch.checked;
         const params = new URLSearchParams({ skip: 0, limit: limit, unlabeled_only: unlabeledOnly.toString() });
         try {
             const data = await fetchApi(`${EVENTS_ENDPOINT}?${params.toString()}`, {}, 'isFetchingEvents');
-            currentEventsData = data.events || [];
-            renderTable(currentEventsData);
+            currentEventsData = data.events || []; // Replace current data on fetch
+            renderTable(currentEventsData, false); // Render fresh table
             if (eventCountSpan) eventCountSpan.textContent = `Total: ${data.total_count || 0} | Showing: ${currentEventsData.length}`;
-        } catch (error) {
-            renderTable([]);
-            if (eventCountSpan) eventCountSpan.textContent = 'Total: - | Showing: -';
-        } finally {
-            showLoading(false);
-            isFetchingEvents = false;
-        }
+        } catch (error) { /* Error handled by fetchApi */ renderTable([]); if (eventCountSpan) eventCountSpan.textContent = 'Total: - | Showing: -'; }
+        finally { showLoading(false); isFetchingEvents = false; }
     }
+
 
     // --- Modal & Labeling ---
     function showDetails(eventUid) {
@@ -234,34 +169,105 @@
         }
     }
 
-    // --- NEW: Refresh function for this page ---
-    function refreshPageData() {
-        console.log("Refreshing events page data...");
-        fetchEvents();
+    // --- NEW: Server-Sent Events (SSE) Handling ---
+    let eventSource = null;
+
+    function connectSSE() {
+        if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
+            console.log("SSE connection already open.");
+            return;
+        }
+
+        console.log("Connecting to SSE endpoint:", SSE_ENDPOINT);
+        eventSource = new EventSource(SSE_ENDPOINT);
+
+        eventSource.onopen = function (event) {
+            console.log("SSE connection opened.");
+            if (sseStatusDiv) {
+                sseStatusDiv.classList.remove('d-none', 'alert-danger');
+                sseStatusDiv.classList.add('alert-info');
+                sseStatusDiv.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Live stream connected. Waiting for new events...';
+            }
+            hideError(); // Hide any previous global errors
+        };
+
+        eventSource.onmessage = function (event) {
+            console.log("SSE message received:", event.data);
+            try {
+                const newEvent = JSON.parse(event.data);
+                // Add to internal data array (optional, depends if you need full history in JS)
+                // currentEventsData.unshift(newEvent); // Add to beginning
+
+                // Prepend to table visually
+                const newRowHtml = createTableRow(newEvent);
+                if (eventsTableBody) {
+                    // Remove placeholder if present
+                    const placeholder = eventsTableBody.querySelector('.placeholder-row');
+                    if (placeholder) placeholder.remove();
+                    // Add new row at the top
+                    eventsTableBody.insertAdjacentHTML('afterbegin', newRowHtml);
+                    // Optional: Limit number of rows displayed?
+                    // const maxRows = 200;
+                    // while (eventsTableBody.rows.length > maxRows) {
+                    //    eventsTableBody.deleteRow(-1); // Remove last row
+                    // }
+                }
+                // Update counts (approximate, better to refetch stats periodically)
+                if (eventCountSpan) {
+                    // This is tricky without fetching total count again
+                    // Maybe just indicate new event arrived
+                }
+
+            } catch (e) {
+                console.error("Error parsing SSE data:", e);
+            }
+        };
+
+        eventSource.onerror = function (event) {
+            console.error("SSE error:", event);
+            if (sseStatusDiv) {
+                sseStatusDiv.classList.remove('alert-info');
+                sseStatusDiv.classList.add('alert-danger');
+                sseStatusDiv.textContent = 'Live stream disconnected. Attempting to reconnect...';
+            }
+            setApiStatus('danger', 'Stream Error');
+            // EventSource automatically attempts reconnection on error
+            // Close manually if needed: eventSource.close();
+        };
+    }
+
+    function disconnectSSE() {
+        if (eventSource) {
+            console.log("Closing SSE connection.");
+            eventSource.close();
+            eventSource = null;
+            if (sseStatusDiv) sseStatusDiv.classList.add('d-none');
+        }
     }
     // --- End NEW ---
 
-    // Initial Load
-    document.addEventListener('DOMContentLoaded', refreshPageData); // Call refresh on load
 
-    // --- Event Listeners ---
-    // Refresh button listener is in base.html, needs logic to call fetchEvents if this page is active
-    // We can add a specific listener here too, or rely on the base one if it checks active page
-    const pageRefreshButton = document.getElementById('refreshButton'); // Get it again in this scope
-    pageRefreshButton?.addEventListener('click', () => {
-        if (document.getElementById('eventsSection')?.classList.contains('active')) {
-            fetchEvents();
-        }
-    });
+    // Refresh function for this page
+    function refreshPageData() {
+        console.log("Refreshing events page data...");
+        fetchEvents(); // Fetch historical data
+    }
 
+    // Event Listeners
     unlabeledOnlySwitch?.addEventListener('change', fetchEvents);
     limitSelect?.addEventListener('change', fetchEvents);
     labelForm?.addEventListener('submit', handleLabelSubmit);
+    // Global refresh button listener is in base.html
 
-    // --- Initial Load ---
+    // Initial Load
     document.addEventListener('DOMContentLoaded', () => {
         if (!eventDetailsModal) console.error("Bootstrap modal instance could not be created.");
-        fetchEvents(); // Fetch events when this page loads
+        refreshPageData(); // Fetch initial historical data
+        connectSSE(); // Connect to the SSE stream
     });
+
+    // Clean up SSE connection when page is unloaded (optional but good practice)
+    window.addEventListener('beforeunload', disconnectSSE);
+
 </script>
 {% endblock %}

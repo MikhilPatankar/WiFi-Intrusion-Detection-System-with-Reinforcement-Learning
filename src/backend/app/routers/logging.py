@@ -2,14 +2,19 @@
 # --- File: src/backend/app/routers/logging.py ---
 # No changes needed here
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request # Added Request
 import logging
-from typing import List
-from ..models import EventLabel, LabelUpdateResult, EventLogRead, EventLogReadList, EventStats, TimeSeriesData # Added TimeSeriesData
+from typing import List, AsyncGenerator
+import asyncio
+import json
+from sse_starlette.sse import EventSourceResponse # Import for SSE
+from ..models import EventLabel, LabelUpdateResult, EventLogRead, EventLogReadList, EventStats, TimeSeriesData
 from ..services import log_service
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..db import get_async_session
 from sqlalchemy import func
+from ..broadcast import broadcast # Import broadcaster
+from ..services.log_service import EVENT_CHANNEL # Import channel name
 
 router = APIRouter(prefix="/events", tags=["Events & Labeling"])
 
@@ -70,4 +75,42 @@ async def get_timeseries_data(
     except Exception as e:
         logging.error(f"Failed to get time series data: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Could not retrieve time series data.")
+# --- End NEW ---
+
+# --- NEW SSE Streaming Endpoint ---
+@router.get("/stream")
+async def event_stream(request: Request):
+    """
+    Server-Sent Events endpoint to stream newly created events.
+    """
+    logging.info("Client connected to SSE event stream.")
+
+    async def event_generator() -> AsyncGenerator[str, None]:
+        try:
+            # Subscribe to the event channel
+            async with broadcast.subscribe(channel=EVENT_CHANNEL) as subscriber:
+                # Send initial confirmation (optional)
+                # yield json.dumps({"type": "ping", "timestamp": datetime.datetime.now().isoformat()})
+
+                async for event in subscriber:
+                    # Check if client disconnected
+                    if await request.is_disconnected():
+                        logging.info("SSE client disconnected.")
+                        break
+                    # The message from broadcast.publish is already JSON stringified
+                    # Format for SSE: data: <json_string>\n\n
+                    yield f"data: {event.message}\n\n"
+                    await asyncio.sleep(0.01) # Small sleep to prevent tight loop if needed
+        except asyncio.CancelledError:
+            logging.info("SSE generator cancelled (client likely disconnected).")
+            # Clean up if necessary
+        except Exception as e:
+            logging.error(f"Error in SSE generator: {e}", exc_info=True)
+            # Optionally yield an error message to the client
+            # yield f"event: error\ndata: {json.dumps({'error': 'Internal server error'})}\n\n"
+        finally:
+             logging.info("SSE event generator finished.")
+
+
+    return EventSourceResponse(event_generator())
 # --- End NEW ---

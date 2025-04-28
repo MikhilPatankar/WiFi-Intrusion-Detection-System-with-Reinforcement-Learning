@@ -49,6 +49,9 @@ class Settings(BaseSettings):
     # Store the calculated root directory for potential use elsewhere
     BACKEND_DIR: str = BACKEND_ROOT_DIR
 
+    # Use 'memory://' for simple in-memory, or 'redis://localhost:6379' for Redis
+    BROADCAST_URL: str = os.getenv("BROADCAST_URL", "memory://")
+
     class Config:
         # env_file = ".env"
         pass
@@ -58,4 +61,4 @@ print(f"Debug: Determined Backend Root: {settings.BACKEND_DIR}")
 print(f"Debug: Default DB URL: {settings.DATABASE_URL}")
 print(f"Debug: Default Model Path: {settings.MODEL_PATH}")
 print(f"Debug: Default Scaler Path: {settings.SCALER_PATH}")
-
+print(f"Broadcast URL: {settings.BROADCAST_URL}")

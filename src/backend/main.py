@@ -6,12 +6,13 @@ from contextlib import asynccontextmanager
 import logging
 import uvicorn
 import os
-
-# Import configuration, routers, db setup, services
-from app.core.config import settings # Import updated settings
+from fastapi.middleware.cors import CORSMiddleware
+from app.core.config import settings
 from app.routers import prediction, logging as logging_router
 from app.db import create_db_and_tables
 from app.services import prediction_service
+from app.broadcast import broadcast # Import broadcaster
+
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -44,19 +45,25 @@ async def lifespan(app: FastAPI):
     if prediction_service.ml_agent is None: logging.warning("ML Model loading failed.")
     if prediction_service.feature_scaler is None: logging.warning("Feature Scaler loading failed.")
 
-    # --- Create Database Tables ---
     logging.info("Initializing database...")
     await create_db_and_tables()
     logging.info("Database initialized.")
 
-    yield # Application runs
+    await broadcast.connect()
+    logging.info("Broadcaster connected.")
+
+    logging.info("Startup complete.")
+    yield
+    logging.info("Shutdown...");
+
+    await broadcast.disconnect()
+    logging.info("Broadcaster disconnected.")
 
     logging.info("Application shutdown...")
     prediction_service.ml_agent = None
     prediction_service.feature_scaler = None
     logging.info("Resources cleaned up.")
 
-# Create FastAPI app instance
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -64,12 +71,15 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+origins = ["http://localhost", "http://localhost:8080", "http://127.0.0.1:8050", "null"]
+
+app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.include_router(prediction.router)
 app.include_router(logging_router.router)
 
 @app.get("/", tags=["Root"])
 async def read_root():
-    return {"message": f"Welcome to the {settings.PROJECT_NAME}!"}
+    return {"message": f"{settings.PROJECT_NAME} is running!"}
 
 # --- Main execution block ---
 if __name__ == "__main__":

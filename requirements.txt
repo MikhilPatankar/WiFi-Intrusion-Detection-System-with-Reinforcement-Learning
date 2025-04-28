@@ -37,3 +37,6 @@ watchfiles>=0.18.0 # For FastAPI auto-reload during development (optional)
 
 # Note: Specific versions are examples. Adjust based on compatibility needs.
 # Run 'pip freeze > requirements.txt' in your final environment to capture exact versions.
+
+broadcaster[redis]>=0.1.0 # For Redis Pub/Sub
+sse-starlette
