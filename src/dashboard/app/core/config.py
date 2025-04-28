@@ -17,6 +17,9 @@ DEFAULT_STATIC_DIR = DASHBOARD_APP_DIR / "static"
 class DashboardSettings(BaseSettings):
     """Dashboard Application Settings"""
     APP_NAME: str = "WIDS Dashboard"
+
+    PORT: int = int(os.getenv("PORT", 8050))
+
     # --- Authentication Settings ---
     # IMPORTANT: Use a strong, randomly generated secret key
     AUTH_SECRET_KEY: str = os.getenv("DASHBOARD_AUTH_SECRET_KEY", "8s44984vs684v68s4vf48aw44v8d44")

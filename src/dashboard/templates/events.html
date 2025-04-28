@@ -213,6 +213,16 @@
                  submitLabelSpinner.classList.add('d-none');
              }
         }
+        
+        // --- NEW: Refresh function for this page ---
+        function refreshPageData() {
+            console.log("Refreshing events page data...");
+            fetchEvents();
+        }
+        // --- End NEW ---
+
+        // Initial Load
+        document.addEventListener('DOMContentLoaded', refreshPageData); // Call refresh on load
 
         // --- Event Listeners ---
         // Refresh button listener is in base.html, needs logic to call fetchEvents if this page is active

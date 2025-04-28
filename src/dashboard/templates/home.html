@@ -219,6 +219,17 @@
             fetchStats();
             fetchTimeSeries();
         }
+        
+        // --- NEW: Refresh function for this page ---
+        function refreshPageData() {
+            console.log("Refreshing home page data...");
+            fetchStats();
+            fetchTimeSeries();
+        }
+        // --- End NEW ---
+
+        // Initial Load
+        document.addEventListener('DOMContentLoaded', refreshPageData); // Call refresh on load
 
         // --- Event Listeners ---
         refreshButton?.addEventListener('click', () => {

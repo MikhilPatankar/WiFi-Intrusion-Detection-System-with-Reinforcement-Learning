@@ -16,7 +16,7 @@ from app.routers.auth import require_dashboard_user # Import the dependency
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-PORT = int(os.environ.get("PORT", 8050))
+
 
 # Configure Jinja2 Templates
 templates = Jinja2Templates(directory=settings.TEMPLATES_DIR)
@@ -88,6 +88,25 @@ async def read_events_page(
          return HTMLResponse(content="500 Error: Events template missing.", status_code=500)
     return templates.TemplateResponse(template_name, context)
 
+# --- NEW Settings Page Route ---
+@app.get("/settings", response_class=HTMLResponse, name="settings", tags=["Pages"])
+async def read_settings_page(request: Request, current_user: dict = Depends(require_dashboard_user)):
+    """Serves the Settings page."""
+    context = {
+        "request": request,
+        "user": current_user,
+        "settings": settings, # Pass the settings object
+        "active_page": "settings"
+    }
+    logging.info(f"Serving settings page for user: {current_user.get('username')}")
+    template_name = "settings.html"
+    template_path = os.path.join(settings.TEMPLATES_DIR, template_name)
+    if not os.path.exists(template_path):
+         logging.error(f"Settings template not found: {template_path}")
+         return HTMLResponse(content="500 Error: Settings template missing.", status_code=500)
+    return templates.TemplateResponse(template_name, context)
+# --- End NEW ---
+
 # --- Health Check ---
 @app.get("/health", tags=["Health"])
 async def health_check():
@@ -99,7 +118,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=PORT,      # Run dashboard on DIFFERENT port (e.g., 8050)
+        port=settings.PORT,      # Run dashboard on DIFFERENT port (e.g., 8050)
         reload=True,
         log_level="info"
     )
