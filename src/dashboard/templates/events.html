@@ -22,14 +22,17 @@
                     </tr>
                 </thead>
                 <tbody id="eventsTableBody">
-                    <tr><td colspan="6" class="text-center text-muted py-5">Loading events...</td></tr>
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-5">Loading events...</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
     </div>
 </section>
 
-<div class="modal fade" id="eventDetailsModal" tabindex="-1" aria-labelledby="eventDetailsModalLabel" aria-hidden="true">
+<div class="modal fade" id="eventDetailsModal" tabindex="-1" aria-labelledby="eventDetailsModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
@@ -37,27 +40,44 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                 <h6>Summary</h6>
-                 <div class="row mb-3">
-                     <div class="col-md-6"><p class="mb-1"><small class="text-muted">Timestamp:</small><br><span id="modalTimestamp"></span></p><p class="mb-1"><small class="text-muted">Prediction:</small><br><span id="modalPrediction"></span></p></div>
-                     <div class="col-md-6"><p class="mb-1"><small class="text-muted">Current Label:</small><br><span id="modalCurrentLabel"></span></p><p class="mb-1"><small class="text-muted">Label Timestamp:</small><br><span id="modalLabelTimestamp"></span></p></div>
-                 </div>
-                 <h6>Features</h6>
-                 <pre><code id="modalFeaturesData"></code></pre>
-                 <hr>
-                 <h6>Assign Label</h6>
-                 <form id="labelForm">
-                     <input type="hidden" id="labelEventUidInput">
-                     <div class="mb-3">
-                         <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="humanLabelRadio" id="labelAttack" value="Confirmed Attack" checked><label class="form-check-label" for="labelAttack">Confirmed Attack</label></div>
-                         <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="humanLabelRadio" id="labelFalsePositive" value="False Positive"><label class="form-check-label" for="labelFalsePositive">False Positive</label></div>
-                         <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="humanLabelRadio" id="labelUncertain" value="Uncertain"><label class="form-check-label" for="labelUncertain">Uncertain</label></div>
-                     </div>
-                     <div id="labelSubmitStatus" class="mt-2 small"></div>
-                     <button type="submit" class="btn btn-success" id="submitLabelButton">
-                         <span class="spinner-border spinner-border-sm d-none me-1" role="status" aria-hidden="true"></span>Submit Label
-                     </button>
-                 </form>
+                <h6>Summary</h6>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><small class="text-muted">Timestamp:</small><br><span
+                                id="modalTimestamp"></span></p>
+                        <p class="mb-1"><small class="text-muted">Prediction:</small><br><span
+                                id="modalPrediction"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><small class="text-muted">Current Label:</small><br><span
+                                id="modalCurrentLabel"></span></p>
+                        <p class="mb-1"><small class="text-muted">Label Timestamp:</small><br><span
+                                id="modalLabelTimestamp"></span></p>
+                    </div>
+                </div>
+                <h6>Features</h6>
+                <pre><code id="modalFeaturesData"></code></pre>
+                <hr>
+                <h6>Assign Label</h6>
+                <form id="labelForm">
+                    <input type="hidden" id="labelEventUidInput">
+                    <div class="mb-3">
+                        <div class="form-check form-check-inline"><input class="form-check-input" type="radio"
+                                name="humanLabelRadio" id="labelAttack" value="Confirmed Attack" checked><label
+                                class="form-check-label" for="labelAttack">Confirmed Attack</label></div>
+                        <div class="form-check form-check-inline"><input class="form-check-input" type="radio"
+                                name="humanLabelRadio" id="labelFalsePositive" value="False Positive"><label
+                                class="form-check-label" for="labelFalsePositive">False Positive</label></div>
+                        <div class="form-check form-check-inline"><input class="form-check-input" type="radio"
+                                name="humanLabelRadio" id="labelUncertain" value="Uncertain"><label
+                                class="form-check-label" for="labelUncertain">Uncertain</label></div>
+                    </div>
+                    <div id="labelSubmitStatus" class="mt-2 small"></div>
+                    <button type="submit" class="btn btn-success" id="submitLabelButton">
+                        <span class="spinner-border spinner-border-sm d-none me-1" role="status"
+                            aria-hidden="true"></span>Submit Label
+                    </button>
+                </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -69,179 +89,179 @@
 
 
 {% block scripts %}
-    {# Page-specific JavaScript for Events & Labeling #}
-    <script>
-        // --- DOM Elements (Specific to Events) ---
-        const eventsTableBody = document.getElementById('eventsTableBody');
-        const unlabeledOnlySwitch = document.getElementById('unlabeledOnlySwitch'); // Assumes controls are in base.html
-        const limitSelect = document.getElementById('limitSelect'); // Assumes controls are in base.html
-        const eventCountSpan = document.getElementById('eventCount');
-        const eventDetailsModalEl = document.getElementById('eventDetailsModal');
-        const eventDetailsModal = eventDetailsModalEl ? new bootstrap.Modal(eventDetailsModalEl) : null;
-        const labelForm = document.getElementById('labelForm');
-        // Modal elements
-        const modalEventUid = document.getElementById('modalEventUid');
-        const modalTimestamp = document.getElementById('modalTimestamp');
-        const modalPrediction = document.getElementById('modalPrediction');
-        const modalCurrentLabel = document.getElementById('modalCurrentLabel');
-        const modalLabelTimestamp = document.getElementById('modalLabelTimestamp');
-        const modalFeaturesData = document.getElementById('modalFeaturesData');
-        const labelEventUidInput = document.getElementById('labelEventUidInput');
-        const labelSubmitStatus = document.getElementById('labelSubmitStatus');
-        const submitLabelButton = document.getElementById('submitLabelButton');
-        const submitLabelSpinner = submitLabelButton?.querySelector('.spinner-border');
+{# Page-specific JavaScript for Events & Labeling #}
+<script>
+    // --- DOM Elements (Specific to Events) ---
+    const eventsTableBody = document.getElementById('eventsTableBody');
+    const unlabeledOnlySwitch = document.getElementById('unlabeledOnlySwitch'); // Assumes controls are in base.html
+    const limitSelect = document.getElementById('limitSelect'); // Assumes controls are in base.html
+    const eventCountSpan = document.getElementById('eventCount');
+    const eventDetailsModalEl = document.getElementById('eventDetailsModal');
+    const eventDetailsModal = eventDetailsModalEl ? new bootstrap.Modal(eventDetailsModalEl) : null;
+    const labelForm = document.getElementById('labelForm');
+    // Modal elements
+    const modalEventUid = document.getElementById('modalEventUid');
+    const modalTimestamp = document.getElementById('modalTimestamp');
+    const modalPrediction = document.getElementById('modalPrediction');
+    const modalCurrentLabel = document.getElementById('modalCurrentLabel');
+    const modalLabelTimestamp = document.getElementById('modalLabelTimestamp');
+    const modalFeaturesData = document.getElementById('modalFeaturesData');
+    const labelEventUidInput = document.getElementById('labelEventUidInput');
+    const labelSubmitStatus = document.getElementById('labelSubmitStatus');
+    const submitLabelButton = document.getElementById('submitLabelButton');
+    const submitLabelSpinner = submitLabelButton?.querySelector('.spinner-border');
 
-        // --- State ---
-        let currentEventsData = [];
-        let isFetchingEvents = false;
+    // --- State ---
+    let currentEventsData = [];
+    let isFetchingEvents = false;
 
-        // --- API Endpoints ---
-        const EVENTS_ENDPOINT = `${WIDS_API_BASE_URL}/events/`;
-        const LABEL_ENDPOINT = `${WIDS_API_BASE_URL}/events/label`;
+    // --- API Endpoints ---
+    const EVENTS_ENDPOINT = `${WIDS_API_BASE_URL}/events/`;
+    const LABEL_ENDPOINT = `${WIDS_API_BASE_URL}/events/label`;
 
-        // --- Rendering Functions ---
-        function renderTable(events) {
-            if (!eventsTableBody) return;
-            eventsTableBody.innerHTML = '';
-            if (!events || events.length === 0) {
-                eventsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">No events found matching criteria.</td></tr>';
-                return;
-            }
-            events.forEach(event => {
-                const row = eventsTableBody.insertRow();
-                const predictionText = event.prediction === 1 ? 'Anomaly' : 'Normal';
-                const labelText = event.human_label || 'N/A';
-                const labelStatus = event.human_label ? 'Labeled' : 'Unlabeled';
-                const labelBadge = event.human_label
-                    ? `<span class="badge bg-info-subtle text-info-emphasis label-badge">${event.human_label}</span>`
-                    : `<span class="badge bg-warning-subtle text-warning-emphasis label-badge">Unlabeled</span>`;
-                const predictionBadge = event.prediction === 1
-                    ? `<span class="badge bg-danger-subtle text-danger-emphasis prediction-badge">Anomaly</span>`
-                    : `<span class="badge bg-success-subtle text-success-emphasis prediction-badge">Normal</span>`;
+    // --- Rendering Functions ---
+    function renderTable(events) {
+        if (!eventsTableBody) return;
+        eventsTableBody.innerHTML = '';
+        if (!events || events.length === 0) {
+            eventsTableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">No events found matching criteria.</td></tr>';
+            return;
+        }
+        events.forEach(event => {
+            const row = eventsTableBody.insertRow();
+            const predictionText = event.prediction === 1 ? 'Anomaly' : 'Normal';
+            const labelText = event.human_label || 'N/A';
+            const labelStatus = event.human_label ? 'Labeled' : 'Unlabeled';
+            const labelBadge = event.human_label
+                ? `<span class="badge bg-info-subtle text-info-emphasis label-badge">${event.human_label}</span>`
+                : `<span class="badge bg-warning-subtle text-warning-emphasis label-badge">Unlabeled</span>`;
+            const predictionBadge = event.prediction === 1
+                ? `<span class="badge bg-danger-subtle text-danger-emphasis prediction-badge">Anomaly</span>`
+                : `<span class="badge bg-success-subtle text-success-emphasis prediction-badge">Normal</span>`;
 
-                row.innerHTML = `
+            row.innerHTML = `
                     <td><small>${formatTimestamp(event.timestamp)}</small></td>
-                    <td><small class="font-monospace">${event.event_uid ? event.event_uid.substring(0, 12)+'...' : 'N/A'}</small></td>
+                    <td><small class="font-monospace">${event.event_uid ? event.event_uid.substring(0, 12) + '...' : 'N/A'}</small></td>
                     <td>${predictionBadge}</td>
                     <td>${labelBadge}</td>
                     <td>${labelStatus}</td>
                     <td><button class="btn btn-sm btn-outline-primary" onclick="showDetails('${event.event_uid}')"><i class="bi bi-pencil-square me-1"></i>View/Label</button></td>
                 `;
-            });
-        }
+        });
+    }
 
-        // --- Data Fetching ---
-        async function fetchEvents() {
+    // --- Data Fetching ---
+    async function fetchEvents() {
+        // Use common fetchApi from base.html
+        if (isFetchingEvents || !limitSelect || !unlabeledOnlySwitch) return;
+        isFetchingEvents = true;
+        showLoading(true); // Use global loading indicator
+        const limit = limitSelect.value;
+        const unlabeledOnly = unlabeledOnlySwitch.checked;
+        const params = new URLSearchParams({ skip: 0, limit: limit, unlabeled_only: unlabeledOnly.toString() });
+        try {
+            const data = await fetchApi(`${EVENTS_ENDPOINT}?${params.toString()}`, {}, 'isFetchingEvents');
+            currentEventsData = data.events || [];
+            renderTable(currentEventsData);
+            if (eventCountSpan) eventCountSpan.textContent = `Total: ${data.total_count || 0} | Showing: ${currentEventsData.length}`;
+        } catch (error) {
+            renderTable([]);
+            if (eventCountSpan) eventCountSpan.textContent = 'Total: - | Showing: -';
+        } finally {
+            showLoading(false);
+            isFetchingEvents = false;
+        }
+    }
+
+    // --- Modal & Labeling ---
+    function showDetails(eventUid) {
+        if (!eventDetailsModal || !modalEventUid) return;
+        const event = currentEventsData.find(e => e.event_uid === eventUid);
+        if (!event) { showError(`Details not found for event UID: ${eventUid}`); return; }
+
+        modalEventUid.textContent = event.event_uid;
+        modalTimestamp.textContent = formatTimestamp(event.timestamp);
+        modalPrediction.textContent = event.prediction === 1 ? 'Anomaly' : (event.prediction === 0 ? 'Normal' : 'Unknown');
+        modalCurrentLabel.textContent = event.human_label || 'None';
+        modalLabelTimestamp.textContent = formatTimestamp(event.label_timestamp);
+        try { modalFeaturesData.textContent = JSON.stringify(event.features_data, null, 2); } catch (e) { modalFeaturesData.textContent = "Error displaying features."; }
+
+        labelEventUidInput.value = event.event_uid;
+        labelSubmitStatus.textContent = '';
+        labelSubmitStatus.className = 'mt-2 small';
+        if (submitLabelButton) submitLabelButton.disabled = false;
+        if (submitLabelSpinner) submitLabelSpinner.classList.add('d-none');
+
+        const currentLabelRadio = document.querySelector(`#labelForm input[value="${event.human_label}"]`);
+        if (currentLabelRadio) currentLabelRadio.checked = true;
+        else { const firstRadio = document.querySelector('#labelForm input[type="radio"]'); if (firstRadio) firstRadio.checked = true; }
+
+        eventDetailsModal.show();
+    }
+
+    async function handleLabelSubmit(event) {
+        event.preventDefault();
+        if (!labelForm || !submitLabelButton || !submitLabelSpinner || !labelEventUidInput || !labelSubmitStatus) return;
+
+        labelSubmitStatus.textContent = '';
+        submitLabelButton.disabled = true;
+        submitLabelSpinner.classList.remove('d-none');
+
+        const eventUid = labelEventUidInput.value;
+        const selectedLabel = labelForm.querySelector('input[name="humanLabelRadio"]:checked')?.value;
+
+        if (!eventUid || !selectedLabel) { /* ... error handling ... */ return; }
+        const payload = { event_uid: eventUid, human_label: selectedLabel };
+        try {
             // Use common fetchApi from base.html
-            if (isFetchingEvents || !limitSelect || !unlabeledOnlySwitch) return;
-            isFetchingEvents = true;
-            showLoading(true); // Use global loading indicator
-            const limit = limitSelect.value;
-            const unlabeledOnly = unlabeledOnlySwitch.checked;
-            const params = new URLSearchParams({ skip: 0, limit: limit, unlabeled_only: unlabeledOnly.toString() });
-             try {
-                 const data = await fetchApi(`${EVENTS_ENDPOINT}?${params.toString()}`, {}, 'isFetchingEvents');
-                 currentEventsData = data.events || [];
-                 renderTable(currentEventsData);
-                 if(eventCountSpan) eventCountSpan.textContent = `Total: ${data.total_count || 0} | Showing: ${currentEventsData.length}`;
-             } catch (error) {
-                 renderTable([]);
-                 if(eventCountSpan) eventCountSpan.textContent = 'Total: - | Showing: -';
-             } finally {
-                 showLoading(false);
-                 isFetchingEvents = false;
-             }
+            const result = await fetchApi(LABEL_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            labelSubmitStatus.textContent = `Successfully labeled as '${selectedLabel}'. Refreshing...`;
+            labelSubmitStatus.className = 'mt-2 small text-success';
+            setTimeout(() => {
+                eventDetailsModal?.hide();
+                fetchEvents(); // Refresh event list only
+            }, 1500);
+        } catch (error) {
+            labelSubmitStatus.textContent = `Error: ${error.message}`;
+            labelSubmitStatus.className = 'mt-2 small text-danger';
+            submitLabelButton.disabled = false;
+            submitLabelSpinner.classList.add('d-none');
         }
+    }
 
-        // --- Modal & Labeling ---
-        function showDetails(eventUid) {
-             if (!eventDetailsModal || !modalEventUid) return;
-             const event = currentEventsData.find(e => e.event_uid === eventUid);
-             if (!event) { showError(`Details not found for event UID: ${eventUid}`); return; }
+    // --- NEW: Refresh function for this page ---
+    function refreshPageData() {
+        console.log("Refreshing events page data...");
+        fetchEvents();
+    }
+    // --- End NEW ---
 
-             modalEventUid.textContent = event.event_uid;
-             modalTimestamp.textContent = formatTimestamp(event.timestamp);
-             modalPrediction.textContent = event.prediction === 1 ? 'Anomaly' : (event.prediction === 0 ? 'Normal' : 'Unknown');
-             modalCurrentLabel.textContent = event.human_label || 'None';
-             modalLabelTimestamp.textContent = formatTimestamp(event.label_timestamp);
-             try { modalFeaturesData.textContent = JSON.stringify(event.features_data, null, 2); } catch (e) { modalFeaturesData.textContent = "Error displaying features."; }
+    // Initial Load
+    document.addEventListener('DOMContentLoaded', refreshPageData); // Call refresh on load
 
-             labelEventUidInput.value = event.event_uid;
-             labelSubmitStatus.textContent = '';
-             labelSubmitStatus.className = 'mt-2 small';
-             if(submitLabelButton) submitLabelButton.disabled = false;
-             if(submitLabelSpinner) submitLabelSpinner.classList.add('d-none');
-
-             const currentLabelRadio = document.querySelector(`#labelForm input[value="${event.human_label}"]`);
-             if (currentLabelRadio) currentLabelRadio.checked = true;
-             else { const firstRadio = document.querySelector('#labelForm input[type="radio"]'); if (firstRadio) firstRadio.checked = true; }
-
-             eventDetailsModal.show();
-         }
-
-        async function handleLabelSubmit(event) {
-             event.preventDefault();
-             if (!labelForm || !submitLabelButton || !submitLabelSpinner || !labelEventUidInput || !labelSubmitStatus) return;
-
-             labelSubmitStatus.textContent = '';
-             submitLabelButton.disabled = true;
-             submitLabelSpinner.classList.remove('d-none');
-
-             const eventUid = labelEventUidInput.value;
-             const selectedLabel = labelForm.querySelector('input[name="humanLabelRadio"]:checked')?.value;
-
-             if (!eventUid || !selectedLabel) { /* ... error handling ... */ return; }
-             const payload = { event_uid: eventUid, human_label: selectedLabel };
-             try {
-                 // Use common fetchApi from base.html
-                 const result = await fetchApi(LABEL_ENDPOINT, {
-                     method: 'POST',
-                     headers: { 'Content-Type': 'application/json' },
-                     body: JSON.stringify(payload)
-                 });
-
-                 labelSubmitStatus.textContent = `Successfully labeled as '${selectedLabel}'. Refreshing...`;
-                 labelSubmitStatus.className = 'mt-2 small text-success';
-                 setTimeout(() => {
-                     eventDetailsModal?.hide();
-                     fetchEvents(); // Refresh event list only
-                 }, 1500);
-             } catch (error) {
-                 labelSubmitStatus.textContent = `Error: ${error.message}`;
-                 labelSubmitStatus.className = 'mt-2 small text-danger';
-                 submitLabelButton.disabled = false;
-                 submitLabelSpinner.classList.add('d-none');
-             }
-        }
-        
-        // --- NEW: Refresh function for this page ---
-        function refreshPageData() {
-            console.log("Refreshing events page data...");
+    // --- Event Listeners ---
+    // Refresh button listener is in base.html, needs logic to call fetchEvents if this page is active
+    // We can add a specific listener here too, or rely on the base one if it checks active page
+    const pageRefreshButton = document.getElementById('refreshButton'); // Get it again in this scope
+    pageRefreshButton?.addEventListener('click', () => {
+        if (document.getElementById('eventsSection')?.classList.contains('active')) {
             fetchEvents();
         }
-        // --- End NEW ---
+    });
 
-        // Initial Load
-        document.addEventListener('DOMContentLoaded', refreshPageData); // Call refresh on load
+    unlabeledOnlySwitch?.addEventListener('change', fetchEvents);
+    limitSelect?.addEventListener('change', fetchEvents);
+    labelForm?.addEventListener('submit', handleLabelSubmit);
 
-        // --- Event Listeners ---
-        // Refresh button listener is in base.html, needs logic to call fetchEvents if this page is active
-        // We can add a specific listener here too, or rely on the base one if it checks active page
-        const pageRefreshButton = document.getElementById('refreshButton'); // Get it again in this scope
-        pageRefreshButton?.addEventListener('click', () => {
-             if (document.getElementById('eventsSection')?.classList.contains('active')) {
-                 fetchEvents();
-             }
-        });
-
-        unlabeledOnlySwitch?.addEventListener('change', fetchEvents);
-        limitSelect?.addEventListener('change', fetchEvents);
-        labelForm?.addEventListener('submit', handleLabelSubmit);
-
-        // --- Initial Load ---
-        document.addEventListener('DOMContentLoaded', () => {
-             if (!eventDetailsModal) console.error("Bootstrap modal instance could not be created.");
-             fetchEvents(); // Fetch events when this page loads
-        });
-    </script>
+    // --- Initial Load ---
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!eventDetailsModal) console.error("Bootstrap modal instance could not be created.");
+        fetchEvents(); // Fetch events when this page loads
+    });
+</script>
 {% endblock %}

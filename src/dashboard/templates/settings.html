@@ -22,19 +22,21 @@
                         <dt class="col-sm-4">Target WIDS API URL</dt>
                         <dd class="col-sm-8">
                             <code>{{ settings.WIDS_API_BASE_URL }}</code>
-                            <small class="d-block text-muted">(Configured via <code>WIDS_API_BASE_URL</code> env variable)</small>
+                            <small class="d-block text-muted">(Configured via <code>WIDS_API_BASE_URL</code> env
+                                variable)</small>
                         </dd>
 
                         <dt class="col-sm-4">Auth Token Expiry</dt>
                         <dd class="col-sm-8">
                             <code>{{ settings.AUTH_ACCESS_TOKEN_EXPIRE_MINUTES }} minutes</code>
-                            <small class="d-block text-muted">(Configured via <code>DASHBOARD_AUTH_ACCESS_TOKEN_EXPIRE_MINUTES</code> env variable)</small>
+                            <small class="d-block text-muted">(Configured via
+                                <code>DASHBOARD_AUTH_ACCESS_TOKEN_EXPIRE_MINUTES</code> env variable)</small>
                         </dd>
 
                         <dt class="col-sm-4">Dashboard App Name</dt>
                         <dd class="col-sm-8"><code>{{ settings.APP_NAME }}</code></dd>
 
-                         <dt class="col-sm-4">Templates Directory</dt>
+                        <dt class="col-sm-4">Templates Directory</dt>
                         <dd class="col-sm-8"><code>{{ settings.TEMPLATES_DIR }}</code></dd>
 
                         <dt class="col-sm-4">Static Files Directory</dt>
@@ -46,26 +48,27 @@
                 </div>
             </div>
 
-             <div class="card">
+            <div class="card">
                 <div class="card-header"><i class="bi bi-palette me-2"></i>User Preferences (Example)</div>
                 <div class="card-body">
-                     <p class="text-muted small mb-4">
+                    <p class="text-muted small mb-4">
                         Controls for user-specific preferences could be added here.
-                        Saving these would typically require storing them in a user profile database (not implemented in this version).
+                        Saving these would typically require storing them in a user profile database (not implemented in
+                        this version).
                     </p>
                     <form id="preferencesForm">
-                         <div class="mb-3">
+                        <div class="mb-3">
                             <label for="themeSelect" class="form-label">Display Theme</label>
                             <select id="themeSelect" class="form-select" disabled>
                                 <option selected>Dark (Default)</option>
                                 <option>Light (Not available)</option>
                             </select>
-                             <small class="d-block text-muted mt-1">Theme switching requires implementation.</small>
+                            <small class="d-block text-muted mt-1">Theme switching requires implementation.</small>
                         </div>
-                         <div class="mb-3">
+                        <div class="mb-3">
                             <label for="eventsPerPage" class="form-label">Default Events Per Page</label>
                             <input type="number" id="eventsPerPage" class="form-control" value="100" disabled>
-                             <small class="d-block text-muted mt-1">Saving preferences requires implementation.</small>
+                            <small class="d-block text-muted mt-1">Saving preferences requires implementation.</small>
                         </div>
                         <button type="submit" class="btn btn-secondary" disabled>Save Preferences (Disabled)</button>
                     </form>
@@ -74,18 +77,21 @@
 
         </div>
         <div class="col-lg-4">
-             <div class="card bg-secondary-subtle border-secondary">
-                 <div class="card-body">
+            <div class="card bg-secondary-subtle border-secondary">
+                <div class="card-body">
                     <h5 class="card-title"><i class="bi bi-info-circle me-2"></i>Changing Settings</h5>
                     <p class="small">To modify critical settings like the API URL:</p>
                     <ol class="small">
                         <li>Stop the dashboard server.</li>
-                        <li>Set the corresponding environment variable (e.g., `export WIDS_API_BASE_URL="http://new-api-address:port"` on Linux/macOS or `set WIDS_API_BASE_URL=http://new-api-address:port` on Windows).</li>
+                        <li>Set the corresponding environment variable (e.g., `export
+                            WIDS_API_BASE_URL="http://new-api-address:port"` on Linux/macOS or `set
+                            WIDS_API_BASE_URL=http://new-api-address:port` on Windows).</li>
                         <li>Restart the dashboard server (`uvicorn main:app ...`).</li>
                     </ol>
-                    <p class="small">Alternatively, manage settings through your deployment environment (Docker, Kubernetes, etc.).</p>
-                 </div>
-             </div>
+                    <p class="small">Alternatively, manage settings through your deployment environment (Docker,
+                        Kubernetes, etc.).</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -93,20 +99,20 @@
 {% endblock %}
 
 {% block scripts %}
-    {# Page-specific JavaScript for Settings (if any interactive elements were added) #}
-    <script>
-        // No interactive JS needed for this read-only settings page example
-         // Add listener for refresh button if needed for this page
-        const pageRefreshButton = document.getElementById('refreshButton');
-        pageRefreshButton?.addEventListener('click', () => {
-            // Settings page doesn't fetch dynamic data, maybe just reload?
-             window.location.reload();
-        });
+{# Page-specific JavaScript for Settings (if any interactive elements were added) #}
+<script>
+    // No interactive JS needed for this read-only settings page example
+    // Add listener for refresh button if needed for this page
+    const pageRefreshButton = document.getElementById('refreshButton');
+    pageRefreshButton?.addEventListener('click', () => {
+        // Settings page doesn't fetch dynamic data, maybe just reload?
+        window.location.reload();
+    });
 
-         document.addEventListener('DOMContentLoaded', () => {
-            console.log("Settings page loaded.");
-            // Set API status to connected as this page doesn't rely on API calls
-            setApiStatus('success', 'Connected');
-        });
-    </script>
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log("Settings page loaded.");
+        // Set API status to connected as this page doesn't rely on API calls
+        setApiStatus('success', 'Connected');
+    });
+</script>
 {% endblock %}
