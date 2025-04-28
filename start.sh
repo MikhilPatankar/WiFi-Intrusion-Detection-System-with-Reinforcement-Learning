@@ -1,2 +1,2 @@
-cd /usr/src/app/src/backend && uvicorn main:app --reload --port 8000 &
-cd /usr/src/app/src/dashboard && python main.py
+pip3 uninstall opencv-python opencv-contrib-python opencv-python-headless -y
+python /usr/src/app/src/backend/main.py

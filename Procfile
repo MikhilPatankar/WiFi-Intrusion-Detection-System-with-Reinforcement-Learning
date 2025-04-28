@@ -1,1 +1,1 @@
-web: python /usr/src/app/src/backend/main.py && streamlit run /usr/src/app/src/dashboard/dashboard.py
+web: cd /usr/src/app/src/backend && uvicorn main:app --reload --port 8000

@@ -15,6 +15,9 @@ from app.services import prediction_service
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+PORT: int = int(os.getenv("PORT", 8000))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logging.info("Application startup...")
@@ -72,5 +75,5 @@ async def read_root():
 if __name__ == "__main__":
     logging.info("Starting Uvicorn server...")
     # Directory checks are now handled in lifespan
-    uvicorn.run( "main:app", host="0.0.0.0", port=8000, reload=True, log_level="info")
+    uvicorn.run( "main:app", host="0.0.0.0", port=PORT, reload=True, log_level="info")
 
