@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}WIDS Public Overview{% endblock %}
+
+{% block sidebar_controls %}
+    {# No controls needed on public home sidebar #}
+{% endblock %}
+
+{% block content %}
+<section id="publicHomeSection" class="dashboard-section active pt-4">
+    <div class="text-center mb-5">
+        <i class="bi bi-broadcast-pin display-1 text-primary"></i>
+        <h1 class="display-5 fw-bold mt-3">Wireless Intrusion Detection System</h1>
+        <p class="lead text-muted col-lg-8 mx-auto">Monitoring wireless network activity for potential threats.</p>
+    </div>
+
+    <div class="row g-4 justify-content-center">
+        <div class="col-md-5 col-lg-4">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                    <i class="bi bi-shield-exclamation display-4 text-danger mb-3"></i>
+                    <h5 class="card-title">Recent Threats</h5>
+                    <p class="card-text text-muted small">Overview of recently detected potential threats.</p>
+                    {# Placeholder - Fetch public stats if available #}
+                    <p class="display-6 placeholder-glow"><span class="placeholder col-3">0</span></p>
+                    <small class="text-muted">(Data requires public API endpoint)</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5 col-lg-4">
+            <div class="card text-center h-100">
+                <div class="card-body">
+                     <i class="bi bi-shield-check display-4 text-success mb-3"></i>
+                    <h5 class="card-title">Mitigation Status</h5>
+                    <p class="card-text text-muted small">Current status of automated mitigation actions.</p>
+                     {# Placeholder #}
+                    <p class="display-6 placeholder-glow"><span class="placeholder col-4">N/A</span></p>
+                     <small class="text-muted">(Feature under development)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if not user %}
+    <div class="text-center mt-5">
+        <p class="text-muted">Authorized personnel can log in for detailed monitoring and management.</p>
+        <a href="{{ url_for('login_page') }}" class="btn btn-primary btn-lg">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Admin Login
+        </a>
+    </div>
+    {% endif %}
+
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // No page-specific JS needed for static public home currently
+    // Could add a fetch for public stats if an endpoint exists
+    function refreshPageData() {
+        console.log("Public home refreshed.");
+        // Example: Fetch public stats if available
+        // fetchPublicStats();
+        setApiStatus('secondary', 'Public View'); // Indicate non-admin view
+    }
+    document.addEventListener('DOMContentLoaded', refreshPageData);
+</script>
+{% endblock %}

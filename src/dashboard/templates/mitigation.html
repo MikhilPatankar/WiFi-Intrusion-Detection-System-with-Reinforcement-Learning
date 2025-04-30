@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}WIDS Mitigation{% endblock %}
+
+{% block sidebar_controls %}
+{# No specific controls needed yet #}
+{% endblock %}
+
+{% block content %}
+<section id="mitigationSection" class="dashboard-section active">
+    <div class="page-header">
+        <h1 class="h2">Mitigation Actions</h1>
+    </div>
+    <div class="alert alert-warning" role="alert">
+        <i class="bi bi-cone-striped me-2"></i> Mitigation features are under development.
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Affected Devices</div>
+                <div class="card-body">
+                    <p class="text-muted text-center py-4">List of potentially affected devices will appear here.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Mitigation Panel</div>
+                <div class="card-body">
+                    <p class="text-muted text-center py-4">Controls for mitigation actions (e.g., block device) will
+                        appear here.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function refreshPageData() { console.log("Refreshing mitigation page (no data fetch)."); }
+    document.addEventListener('DOMContentLoaded', () => { setApiStatus('success', 'Connected'); }); // Set status as page doesn't fetch
+</script>
+{% endblock %}

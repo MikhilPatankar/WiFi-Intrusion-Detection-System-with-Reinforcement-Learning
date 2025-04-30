@@ -1,0 +1,561 @@
+{% extends "base.html" %} {% block content %}
+<section id="monitoringSection" class="dashboard-section active">
+    <div class="page-header">
+        <h1 class="h2 text-center" id="radiant-title">Threat Intelligence Center</h1>
+    </div>
+
+    <!-- Row 1: Overview Stats -->
+    <div class="row g-4 mb-4">
+        <!-- Stats Cards Column (Now Full Width) -->
+        <div class="col-lg-12">
+            <h5 class="mb-3 fw-bold"></h5>
+            <div class="row g-3" id="statsCards">
+                <!-- Existing Card: Total Events -->
+                <div class="col-6 col-md col-lg"> <!-- Adjusted grid for 5 items -->
+                    <div class="card stat-card h-100">
+                        <div class="card-body placeholder-glow">
+                            <div class="stat-icon text-secondary">
+                                <i class="bi bi-hdd-stack"></i>
+                            </div>
+                            <div class="stat-value placeholder" id="statTotalEvents">0</div>
+                            <div class="stat-label">Total Events</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Existing Card: Normal Count -->
+                <div class="col-6 col-md col-lg">
+                    <div class="card stat-card h-100">
+                        <div class="card-body placeholder-glow">
+                            <div class="stat-icon text-success">
+                                <i class="bi bi-check-circle"></i>
+                            </div>
+                            <div class="stat-value placeholder" id="statNormalCount">0</div>
+                            <div class="stat-label">Normal Events</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Changed Card: Total Attacks -->
+                <div class="col-6 col-md col-lg">
+                    <div class="card stat-card h-100">
+                        <div class="card-body placeholder-glow">
+                            <div class="stat-icon text-danger"> <!-- Changed icon -->
+                                <i class="bi bi-shield-exclamation"></i>
+                            </div>
+                             <!-- Changed ID -->
+                            <div class="stat-value placeholder text-danger" id="statTotalAttacks">
+                                0
+                            </div>
+                             <!-- Changed Label -->
+                            <div class="stat-label">Total Attacks</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Existing Card: Total Anomalies -->
+                <div class="col-6 col-md col-lg">
+                    <div class="card stat-card h-100">
+                        <div class="card-body placeholder-glow">
+                            <div class="stat-icon text-danger"><i class="bi bi-bug"></i></div>
+                            <div class="stat-value placeholder text-danger" id="statTotalAnomalies">
+                                0
+                            </div>
+                            <div class="stat-label">Total Anomalies</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Changed Card: Unknown Attacks -->
+               <div class="col-6 col-md col-lg">
+                   <div class="card stat-card h-100">
+                       <div class="card-body placeholder-glow">
+                           <div class="stat-icon text-warning"> <!-- Changed icon and color -->
+                               <i class="bi bi-question-circle"></i>
+                           </div>
+                           <!-- Changed ID -->
+                           <div class="stat-value placeholder text-warning" id="statUnknownAttacks">0</div>
+                           <!-- Changed Label -->
+                           <div class="stat-label">Unknown Attacks</div>
+                       </div>
+                   </div>
+               </div>
+            </div>
+        </div>
+    </div> <!-- End Row 1 -->
+
+    <!-- Row 2: Distributions (Moved Here) -->
+    <div class="row g-4 mb-4">
+        <div class="col-12"> <!-- Takes full width -->
+            <h5 class="mb-3 fw-bold"></h5>
+            <div class="row g-3">
+                <div class="col-md-6"> <!-- Changed to md-6 for side-by-side on medium+ -->
+                    <div class="chart-card">
+                         <h6 class="chart-title text-center fw-light mb-2 small">Prediction Distribution</h6>
+                        <div class="chart-container" style="height: 180px">
+                            <canvas id="predictionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6"> <!-- Changed to md-6 for side-by-side on medium+ -->
+                    <div class="chart-card">
+                         <h6 class="chart-title text-center fw-light mb-2 small">Label Distribution</h6>
+                        <div class="chart-container" style="height: 180px">
+                            <canvas id="labelChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- End Row 2 -->
+
+    <!-- Row 3: Status Cards (System, Recent, Labeling) - Was Row 2 -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6 col-xl-4">
+            <div class="card h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3">
+                        <i class="bi bi-heart-pulse-fill text-success display-6"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="card-title text-muted mb-1">System Status</h6>
+                        <p class="card-text mb-0">
+                            <span class="fw-bold text-success">Nominal</span>
+                            <small class="text-muted ms-2">(API:
+                                <span id="backendHealthStatus"
+                                    class="placeholder placeholder-xs col-2">OK</span>)</small>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <div class="card h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3">
+                        <i class="bi bi-graph-up-arrow text-primary display-6"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="card-title text-muted mb-1">Recent Activity (1h)</h6>
+                        <p class="card-text mb-0">
+                            <!-- Note: This card might now be less relevant or need different data -->
+                            <span id="recentAnomalyCount" class="fw-bold text-danger placeholder">0</span>
+                            Anomalies Detected
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-12 col-xl-4">
+            <div class="card h-100">
+                <div class="card-body d-flex align-items-center">
+                    <div class="flex-shrink-0 me-3">
+                        <i class="bi bi-journal-check text-info display-6"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="card-title text-muted mb-1">Labeling Status</h6>
+                        <p class="card-text mb-0">
+                            <span id="labelingUnlabeledCount" class="fw-bold text-warning placeholder">0</span>
+                            Unlabeled /
+                            <span id="labelingLabeledCount" class="fw-bold text-info placeholder">0</span>
+                            Labeled
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- End Row 3 -->
+    <!-- Row 4: Events Over Time Chart - Was Row 3 -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <!-- Wrap the chart section in a card -->
+            <div class="card">
+                <!-- Add a card-header for the title -->
+                <div class="card-header">
+                    <i class="bi bi-graph-up me-2"></i> <!-- Optional: Add an icon -->
+                    Events Over Time (Last 24 Hours)
+                </div>
+                <!-- Move the existing chart-card into the card-body -->
+                <div class="card-body">
+                    <div class="chart-card"> <!-- Keep chart-card for potential specific styling -->
+                        <div class="chart-container" style="height: 250px">
+                            <canvas id="timeSeriesChart"></canvas>
+                        </div>
+                        <div id="timeSeriesError" class="text-center text-danger small mt-2 d-none"></div>
+                    </div>
+                </div>
+            </div> <!-- End Card -->
+            <!-- REMOVE the old h5 title that was here:
+            <h5 class="card-title mb-3 text-light fw-light">
+                Events Over Time (Last 24 Hours)
+            </h5>
+            -->
+        </div>
+    </div> <!-- End Row 4 -->
+
+
+    <!-- Row 5: Device Info Placeholders - Was Row 4 -->
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-router me-2"></i>Monitored Devices
+                </div>
+                <div class="card-body">
+                    <p class="text-muted text-center py-4">
+                        Device monitoring overview coming soon.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Affected Devices
+                </div>
+                <div class="card-body">
+                    <p class="text-muted text-center py-4">
+                        Affected device list coming soon.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div> <!-- End Row 5 -->
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // --- DOM Elements & State (Specific to Admin Monitoring) ---
+    const statsCardsContainer = document.getElementById('statsCards')
+    const predictionChartCtx = document
+        .getElementById('predictionChart')
+        ?.getContext('2d')
+    const labelChartCtx = document.getElementById('labelChart')?.getContext('2d')
+    const timeSeriesChartCtx = document
+        .getElementById('timeSeriesChart')
+        ?.getContext('2d')
+    const timeSeriesError = document.getElementById('timeSeriesError')
+    const statElements = {
+        totalEvents: document.getElementById('statTotalEvents'),
+        normalCount: document.getElementById('statNormalCount'),
+        totalAnomalies: document.getElementById('statTotalAnomalies'),
+        // Changed elements
+        unknownAttacks: document.getElementById('statUnknownAttacks'), // Changed ID
+        totalAttacks: document.getElementById('statTotalAttacks'),     // Changed ID
+    }
+    const overviewElements = {
+        backendHealth: document.getElementById('backendHealthStatus'),
+        recentAnomalies: document.getElementById('recentAnomalyCount'), // Keep or remove depending on relevance
+        unlabeledCount: document.getElementById('labelingUnlabeledCount'),
+        labeledCount: document.getElementById('labelingLabeledCount')
+    }
+    let predictionChart = null
+    let labelChart = null
+    let timeSeriesChart = null
+    let currentStatsData = null
+    let currentTimeSeriesData = null
+    let isFetchingStats = false
+    let isFetchingTimeSeries = false
+    let isFetchingHealth = false
+    // API Endpoints
+    const STATS_ENDPOINT = `${WIDS_API_BASE_URL}/events/stats`
+    const TIMESERIES_ENDPOINT = `${WIDS_API_BASE_URL}/events/timeseries?interval=hour&hours_ago=24`
+    const HEALTH_ENDPOINT = `${WIDS_API_BASE_URL}/`
+
+    // --- Rendering Functions ---
+    function renderStats(stats) {
+        if (!stats) {
+            // Clear main stats
+             if (statElements.totalEvents) statElements.totalEvents.textContent = '-';
+             if (statElements.normalCount) statElements.normalCount.textContent = '-';
+             if (statElements.totalAnomalies) statElements.totalAnomalies.textContent = '-';
+             if (statElements.unknownAttacks) statElements.unknownAttacks.textContent = '-'; // Changed
+             if (statElements.totalAttacks) statElements.totalAttacks.textContent = '-';     // Changed
+             // Clear overview stats derived from stats endpoint
+             if (overviewElements.recentAnomalies) overviewElements.recentAnomalies.textContent = '-';
+             if (overviewElements.unlabeledCount) overviewElements.unlabeledCount.textContent = '-';
+             if (overviewElements.labeledCount) overviewElements.labeledCount.textContent = '-';
+            return;
+        }
+        currentStatsData = stats // Update state
+
+        // Update stat card values
+        // ** IMPORTANT: Adjust API keys (e.g., unknown_attack_count, total_attack_count) if different **
+        if (statElements.totalEvents)
+            statElements.totalEvents.textContent = formatNumber(stats.total_events ?? 0);
+        if (statElements.normalCount)
+            statElements.normalCount.textContent = formatNumber(stats.normal_count ?? 0);
+        if (statElements.totalAnomalies)
+            statElements.totalAnomalies.textContent = formatNumber(stats.anomaly_count ?? 0); // Assuming this is still relevant
+        if (statElements.unknownAttacks) // Changed
+            statElements.unknownAttacks.textContent = formatNumber(stats.unknown_attack_count ?? 0); // Assumed API key
+        if (statElements.totalAttacks) // Changed
+            statElements.totalAttacks.textContent = formatNumber(stats.total_attack_count ?? 0); // Assumed API key
+
+        // Update overview card values (derived from the same stats endpoint)
+        // Update recentAnomalyCount if it's still needed and data is available (e.g., stats.anomalies_last_hour)
+        if (overviewElements.recentAnomalies && stats.anomalies_last_hour !== undefined)
+            overviewElements.recentAnomalies.textContent = formatNumber(stats.anomalies_last_hour ?? 0);
+        else if (overviewElements.recentAnomalies)
+             overviewElements.recentAnomalies.textContent = '-'; // Or hide the card if data is unavailable
+
+        if (overviewElements.unlabeledCount)
+            overviewElements.unlabeledCount.textContent = formatNumber(stats.unlabeled_count ?? 0);
+        if (overviewElements.labeledCount)
+            overviewElements.labeledCount.textContent = formatNumber(stats.labeled_count ?? 0);
+
+        // Remove placeholder styles after rendering
+        document
+            .querySelectorAll('.placeholder')
+            .forEach(el => el.classList.remove('placeholder', 'placeholder-glow'));
+
+        // Render charts
+        renderPredictionChart(stats);
+        renderLabelChart(stats);
+    }
+
+    // --- Chart Rendering Functions ---
+    function renderPredictionChart(stats) {
+        if (!predictionChartCtx || !stats) return;
+        // Assuming normal_count and anomaly_count are still relevant for this chart
+        const data = {
+            labels: ['Normal', 'Anomaly'],
+            datasets: [{
+                label: 'Prediction Distribution',
+                data: [stats.normal_count ?? 0, stats.anomaly_count ?? 0],
+                backgroundColor: ['rgba(40, 167, 69, 0.7)', 'rgba(220, 53, 69, 0.7)'],
+                borderColor: ['rgba(40, 167, 69, 1)', 'rgba(220, 53, 69, 1)'],
+                borderWidth: 1
+            }]
+        };
+        const options = {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: true, position: 'bottom', labels: { color: '#adb5bd', boxWidth: 12, padding: 10 } }, tooltip: { enabled: true } }
+        };
+        if (predictionChart) predictionChart.destroy();
+        predictionChart = new Chart(predictionChartCtx, { type: 'doughnut', data: data, options: options });
+    }
+
+    function renderLabelChart(stats) {
+         if (!labelChartCtx || !stats) return;
+         // ** IMPORTANT: Ensure API provides labeled_normal_count and labeled_anomaly_count if needed **
+        const data = {
+            labels: ['Unlabeled', 'Labeled Normal', 'Labeled Anomaly'],
+            datasets: [{
+                label: 'Label Distribution',
+                data: [ stats.unlabeled_count ?? 0, stats.labeled_normal_count ?? 0, stats.labeled_anomaly_count ?? 0 ],
+                backgroundColor: ['rgba(255, 193, 7, 0.7)', 'rgba(13, 202, 240, 0.7)', 'rgba(108, 117, 125, 0.7)'],
+                borderColor: ['rgba(255, 193, 7, 1)', 'rgba(13, 202, 240, 1)', 'rgba(108, 117, 125, 1)'],
+                borderWidth: 1
+            }]
+        };
+         const options = {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: true, position: 'bottom', labels: { color: '#adb5bd', boxWidth: 12, padding: 10 } }, tooltip: { enabled: true } }
+        };
+        if (labelChart) labelChart.destroy();
+        labelChart = new Chart(labelChartCtx, { type: 'doughnut', data: data, options: options });
+    }
+
+
+    // --- Time Series Chart Rendering ---
+    function renderTimeSeriesChart(tsData) {
+        if (!timeSeriesChartCtx || !tsData || !tsData.data_points) {
+            console.warn('Time series chart canvas or data not available.')
+            if (timeSeriesError) timeSeriesError.textContent = 'Could not render time series chart.'
+            timeSeriesError?.classList.remove('d-none')
+            return
+        }
+        if (timeSeriesError) timeSeriesError.classList.add('d-none')
+
+        const labels = tsData.data_points.map(p => formatTimestampForChart(p.time_bucket))
+        const anomalyData = tsData.data_points.map(p => p.anomaly_count) // Assuming this data is still relevant
+        const normalData = tsData.data_points.map(p => p.normal_count)   // Assuming this data is still relevant
+
+        const data = {
+            labels: labels,
+            datasets: [
+                { label: 'Anomalies', data: anomalyData, borderColor: 'rgba(220, 53, 69, 0.8)', backgroundColor: 'rgba(220, 53, 69, 0.2)', fill: true, tension: 0.3, pointRadius: 2, pointBackgroundColor: 'rgba(220, 53, 69, 1)' },
+                { label: 'Normal', data: normalData, borderColor: 'rgba(40, 167, 69, 0.8)', backgroundColor: 'rgba(40, 167, 69, 0.1)', fill: true, tension: 0.3, pointRadius: 2, pointBackgroundColor: 'rgba(40, 167, 69, 1)' }
+            ]
+        }
+        const options = {
+            responsive: true, maintainAspectRatio: false,
+            scales: { x: { ticks: { color: '#adb5bd', maxRotation: 0, autoSkip: true, maxTicksLimit: 12 }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }, y: { beginAtZero: true, ticks: { color: '#adb5bd' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } } },
+            plugins: { legend: { position: 'top', labels: { color: '#adb5bd', padding: 15 } }, tooltip: { enabled: true, mode: 'index', intersect: false, } },
+            interaction: { mode: 'index', intersect: false }
+        }
+        if (timeSeriesChart) timeSeriesChart.destroy()
+        timeSeriesChart = new Chart(timeSeriesChartCtx, { type: 'line', data: data, options: options })
+    }
+
+    // --- Utility Functions ---
+    function formatNumber(num) { return num?.toLocaleString() ?? '0'; }
+    function formatTimestampForChart(isoString) {
+        if (!isoString) return '';
+        try { return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }); }
+        catch (e) { console.error("Error formatting timestamp:", isoString, e); return isoString; }
+    }
+
+
+    // --- Data Fetching ---
+    async function fetchApi(url, options = {}, fetchFlag = null) {
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                let errorMsg = `HTTP error! Status: ${response.status}`;
+                try {
+                    const errData = await response.json();
+                    errorMsg = errData.detail || errData.message || errorMsg;
+                } catch (e) { /* Ignore */ }
+                throw new Error(errorMsg);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error(`Error fetching ${url}:`, error);
+            throw error;
+        }
+    }
+
+
+    async function fetchStats() {
+        if (isFetchingStats) return;
+        isFetchingStats = true;
+        // Add placeholders before fetching - targets all stat-value elements now
+        document.querySelectorAll('#statsCards .stat-value, #recentAnomalyCount, #labelingUnlabeledCount, #labelingLabeledCount').forEach(el => {
+            if (el && !el.classList.contains('placeholder')) { // Only add if not already placeholder
+                el.textContent = '';
+                el.classList.add('placeholder', 'placeholder-glow');
+                 // Clear potential inner spans from previous placeholder logic if any
+                 const innerSpan = el.querySelector('span.placeholder');
+                 if(innerSpan) el.removeChild(innerSpan);
+                 // Add a simple placeholder structure
+                 const span = document.createElement('span');
+                 span.classList.add('placeholder', 'col-6');
+                 el.appendChild(span);
+            } else if (el) {
+                 // Ensure placeholder content is cleared even if class is already there
+                 el.textContent = '';
+                 const span = document.createElement('span');
+                 span.classList.add('placeholder', 'col-6');
+                 el.appendChild(span);
+            }
+        });
+
+        try {
+            const statsData = await fetchApi(STATS_ENDPOINT, {}, 'isFetchingStats');
+            renderStats(statsData);
+        } catch (error) {
+            console.error("Failed to fetch stats:", error);
+            renderStats(null); // Clear stats on error or show error state
+        } finally {
+            isFetchingStats = false;
+             // Handle error state display if fetch failed
+             if (!currentStatsData) {
+                 document.querySelectorAll('.placeholder').forEach(el => {
+                    const parent = el.closest('.stat-value, #recentAnomalyCount, #labelingUnlabeledCount, #labelingLabeledCount');
+                    if (parent) {
+                        parent.classList.remove('placeholder', 'placeholder-glow');
+                        parent.textContent = '-';
+                    } else {
+                         // Fallback for direct placeholders if any structure changes
+                         el.classList.remove('placeholder', 'placeholder-glow');
+                         el.textContent = 'Error';
+                    }
+                 });
+                 // Clean up any remaining placeholder spans within elements now set to 'Error'
+                 document.querySelectorAll('.stat-value, #recentAnomalyCount, #labelingUnlabeledCount, #labelingLabeledCount').forEach(el => {
+                     const innerSpan = el.querySelector('span.placeholder');
+                     if(innerSpan) el.removeChild(innerSpan);
+                 });
+             }
+        }
+    }
+
+
+    async function fetchTimeSeries() {
+        if (isFetchingTimeSeries) return;
+        isFetchingTimeSeries = true;
+        if (timeSeriesError) timeSeriesError.classList.add('d-none');
+        const chartContainer = timeSeriesChartCtx?.canvas?.parentElement;
+        if (chartContainer) chartContainer.classList.add('loading');
+
+        try {
+            const tsData = await fetchApi(
+                TIMESERIES_ENDPOINT,
+                {},
+                'isFetchingTimeSeries'
+            );
+            currentTimeSeriesData = tsData;
+            renderTimeSeriesChart(tsData);
+        } catch (error) {
+             console.error("Failed to fetch time series:", error);
+            if (timeSeriesError)
+                timeSeriesError.textContent = `Error loading time series: ${error.message}`;
+            timeSeriesError?.classList.remove('d-none');
+            renderTimeSeriesChart(null);
+        } finally {
+            isFetchingTimeSeries = false;
+             if (chartContainer) chartContainer.classList.remove('loading');
+        }
+    }
+
+    // --- Health Check ---
+     async function fetchHealth() {
+        if (isFetchingHealth) return;
+        isFetchingHealth = true;
+        const statusElement = overviewElements.backendHealth;
+        if (statusElement) {
+            statusElement.textContent = ''; // Clear text
+            statusElement.classList.remove('text-success', 'text-danger', 'text-warning');
+            statusElement.classList.add('placeholder', 'placeholder-glow', 'col-2');
+        }
+
+        try {
+            const healthData = await fetchApi(HEALTH_ENDPOINT, { method: 'GET' }, 'isFetchingHealth');
+            if (statusElement) {
+                 statusElement.classList.remove('placeholder', 'placeholder-glow', 'col-2');
+                statusElement.textContent = 'OK';
+                statusElement.classList.add('text-success');
+            }
+        } catch (error) {
+            console.error("API Health Check Failed:", error);
+            if (statusElement) {
+                 statusElement.classList.remove('placeholder', 'placeholder-glow', 'col-2');
+                statusElement.textContent = 'Error';
+                statusElement.classList.add('text-danger');
+            }
+        } finally {
+            isFetchingHealth = false;
+            // Ensure placeholder is removed even if element wasn't found initially but exists now
+            if (statusElement && statusElement.classList.contains('placeholder')) {
+                 statusElement.classList.remove('placeholder', 'placeholder-glow', 'col-2');
+                 if (!statusElement.textContent) statusElement.textContent = 'N/A'; // Fallback if status wasn't set
+            }
+        }
+    }
+
+
+    // Combined fetch for initial page load and refresh
+    function refreshPageData() {
+        console.log('Refreshing monitoring data...');
+        // Reset state flags in case previous fetches failed midway
+        isFetchingStats = false;
+        isFetchingTimeSeries = false;
+        isFetchingHealth = false;
+        // Reset data state
+        currentStatsData = null;
+        currentTimeSeriesData = null;
+
+        // Fetch data
+        fetchStats();
+        fetchTimeSeries();
+        fetchHealth();
+    }
+
+    // Initial Load
+    document.addEventListener('DOMContentLoaded', refreshPageData);
+
+    // Optional: Set up auto-refresh
+    // const REFRESH_INTERVAL = 30000; // 30 seconds
+    // setInterval(refreshPageData, REFRESH_INTERVAL);
+
+</script>
+{% endblock %}

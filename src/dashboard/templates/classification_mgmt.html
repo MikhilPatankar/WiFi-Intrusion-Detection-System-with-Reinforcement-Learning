@@ -1,0 +1,502 @@
+{% extends "base.html" %} {% block title %}WIDS Classification Management{%
+endblock %} {% block sidebar_controls %} {# Controls specific to the
+Classification page #}
+<h6 class="sidebar-heading">Classification Filters</h6>
+<ul class="nav flex-column mb-2 controls-section">
+    <li class="nav-item mb-2">
+        <button id="refreshButton" class="btn btn-outline-primary btn-sm w-100">
+            <i class="bi bi-arrow-clockwise"></i> Refresh Events
+        </button>
+    </li>
+    <li class="nav-item mb-2">
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="unlabeledOnlySwitch" checked />
+            <label class="form-check-label" for="unlabeledOnlySwitch">Unlabeled Only</label>
+        </div>
+    </li>
+    <li class="nav-item">
+        <label for="limitSelect" class="form-label">Events/Page:</label>
+        <select class="form-select form-select-sm" id="limitSelect">
+            <option value="25">25</option>
+            <option value="50" selected>50</option>
+            <option value="100">100</option>
+            <option value="250">250</option>
+        </select>
+    </li>
+    {# Add filter by prediction type (anomaly/normal) if needed #}
+</ul>
+{% endblock %} {% block content %}
+<section id="classificationSection" class="dashboard-section active">
+    <div class="page-header d-flex justify-content-between align-items-center">
+        <h1 class="h2 mb-0">Classification Management</h1>
+        <span id="eventCount" class="text-muted">Total: 0 | Page: 1 | Showing: 0</span>
+    </div>
+    <p class="text-muted mt-2">
+        Review predicted events and provide accurate classification feedback.
+    </p>
+
+    <div class="alert alert-info small mt-3 d-none" role="alert" id="sseStatus">
+        <span class="spinner-border spinner-border-sm me-1"></span> Live stream
+        active. New events will appear here.
+    </div>
+
+    <div class="table-container mt-3">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm align-middle">
+                <thead class="sticky-top">
+                    <tr>
+                        <th scope="col">Timestamp</th>
+                        <th scope="col">UID</th>
+                        <th scope="col">Prediction</th>
+                        <th scope="col">Current Label</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="classificationTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            Loading events...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <nav aria-label="Classification navigation" class="mt-3 d-flex justify-content-center">
+        <ul class="pagination pagination-sm" id="paginationControls"></ul>
+    </nav>
+</section>
+
+<div class="modal fade" id="classificationModal" tabindex="-1" aria-labelledby="classificationModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="classificationModalLabel">
+                    Review & Classify Event: <span id="modalEventUid"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <small class="text-muted">Timestamp:</small><br /><span id="modalTimestamp"></span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <small class="text-muted">Original Prediction:</small><br /><span
+                                id="modalPrediction"></span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1">
+                            <small class="text-muted">Current Label:</small><br /><span id="modalCurrentLabel"></span>
+                        </p>
+                    </div>
+                </div>
+                <h6>Features</h6>
+                <pre><code id="modalFeaturesData"></code></pre>
+                <hr />
+                <h6>Provide Correct Classification</h6>
+                <form id="classificationForm">
+                    <input type="hidden" id="classifyEventUidInput" />
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Select Classification:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="classificationType"
+                                id="classifyTypeNormal" value="Normal" checked />
+                            <label class="form-check-label" for="classifyTypeNormal">Normal / False Positive</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="classificationType"
+                                id="classifyTypeAttack" value="Attack" />
+                            <label class="form-check-label" for="classifyTypeAttack">Attack (Select Type Below)</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="classificationType"
+                                id="classifyTypeOther" value="Other" />
+                            <label class="form-check-label" for="classifyTypeOther">Other / New Attack Type</label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 ms-4" id="attackTypeSelectGroup" style="display: none">
+                        <label for="attackTypeSelect" class="form-label small">Select Known Attack Type:</label>
+                        <select id="attackTypeSelect" class="form-select form-select-sm">
+                            <option value="">-- Select Attack --</option>
+                            {# Options populated by JS #}
+                        </select>
+                        <div id="attackTypeLoadingError" class="text-danger small mt-1 d-none">
+                            Could not load attack types.
+                        </div>
+                    </div>
+
+                    <div class="mb-3 ms-4" id="newAttackTypeGroup" style="display: none">
+                        <label for="newAttackTypeName" class="form-label small">New Attack Type Name:</label>
+                        <input type="text" id="newAttackTypeName" class="form-control form-control-sm"
+                            placeholder="e.g., StealthyScanV3" />
+                        <label for="newAttackTypeDesc" class="form-label small mt-2">Description (Optional):</label>
+                        <textarea id="newAttackTypeDesc" class="form-control form-control-sm" rows="2"></textarea>
+                    </div>
+
+                    <div id="classifySubmitStatus" class="mt-3 small"></div>
+                    <button type="submit" class="btn btn-success" id="submitClassificationButton">
+                        <span class="spinner-border spinner-border-sm d-none me-1"></span>Submit Classification
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+    // --- DOM Elements ---
+    const tableBody = document.getElementById('classificationTableBody')
+    const unlabeledOnlySwitch = document.getElementById('unlabeledOnlySwitch') // From sidebar
+    const limitSelect = document.getElementById('limitSelect') // From sidebar
+    const eventCountSpan = document.getElementById('eventCount')
+    const paginationControls = document.getElementById('paginationControls')
+    const classificationModalEl = document.getElementById('classificationModal')
+    const classificationModal = classificationModalEl
+        ? new bootstrap.Modal(classificationModalEl)
+        : null
+    const classificationForm = document.getElementById('classificationForm')
+    // Modal fields
+    const modalEventUid = document.getElementById('modalEventUid')
+    const modalTimestamp = document.getElementById('modalTimestamp')
+    const modalPrediction = document.getElementById('modalPrediction')
+    const modalCurrentLabel = document.getElementById('modalCurrentLabel')
+    const modalFeaturesData = document.getElementById('modalFeaturesData')
+    const classifyEventUidInput = document.getElementById('classifyEventUidInput')
+    const classifySubmitStatus = document.getElementById('classifySubmitStatus')
+    const submitClassificationButton = document.getElementById(
+        'submitClassificationButton'
+    )
+    const submitClassificationSpinner =
+        submitClassificationButton?.querySelector('.spinner-border')
+    // Classification type specific fields
+    const attackTypeSelectGroup = document.getElementById('attackTypeSelectGroup')
+    const attackTypeSelect = document.getElementById('attackTypeSelect')
+    const attackTypeLoadingError = document.getElementById(
+        'attackTypeLoadingError'
+    )
+    const newAttackTypeGroup = document.getElementById('newAttackTypeGroup')
+    const newAttackTypeName = document.getElementById('newAttackTypeName')
+    const newAttackTypeDesc = document.getElementById('newAttackTypeDesc')
+
+    // --- State ---
+    let currentPage = 1
+    let totalEvents = 0
+    let eventsPerPage = 50
+    let currentClassificationData = []
+    let isFetchingClassifications = false
+    let knownAttackTypes = [] // Cache known types
+
+    // --- API Endpoints ---
+    const EVENTS_ENDPOINT = `${WIDS_API_BASE_URL}/events/` // Fetch classified events
+    const LABEL_ENDPOINT = `${WIDS_API_BASE_URL}/events/label` // Submit feedback
+    const ATTACK_TYPES_ENDPOINT = `${WIDS_API_BASE_URL}/attack_types/` // Fetch known types
+
+    // --- Rendering ---
+    function renderClassificationTable(events) {
+        if (!tableBody) return
+        tableBody.innerHTML = ''
+        if (!events || events.length === 0) {
+            tableBody.innerHTML =
+                '<tr><td colspan="5" class="text-center text-muted py-5">No events found.</td></tr>'
+            return
+        }
+        events.forEach(event => {
+            const row = tableBody.insertRow()
+            const predictionBadge =
+                event.prediction === 1
+                    ? `<span class="badge bg-danger-subtle text-danger-emphasis prediction-badge">Attack</span>`
+                    : `<span class="badge bg-success-subtle text-success-emphasis prediction-badge">Normal</span>`
+            const labelBadge = event.human_label
+                ? `<span class="badge bg-info-subtle text-info-emphasis label-badge">${event.human_label}</span>`
+                : `<span class="badge bg-warning-subtle text-warning-emphasis label-badge">Unlabeled</span>`
+            row.innerHTML = `
+                    <td><small>${formatTimestamp(event.timestamp)}</small></td>
+                    <td><small class="font-monospace" title="${event.event_uid
+                }">${event.event_uid ? event.event_uid.substring(0, 12) + '...' : 'N/A'
+                }</small></td>
+                    <td>${predictionBadge}</td>
+                    <td>${labelBadge}</td>
+                    <td><button class="btn btn-sm btn-outline-primary" onclick="showClassificationModal('${event.event_uid
+                }')"><i class="bi bi-check2-square me-1"></i>Classify</button></td>
+                `
+        })
+    }
+    function renderPagination() {
+        /* ... (Same pagination logic as events log) ... */
+    }
+
+    // --- Data Fetching ---
+    async function fetchClassifications(page = 1) {
+        if (isFetchingClassifications || !limitSelect || !unlabeledOnlySwitch)
+            return
+        isFetchingClassifications = true
+        showLoading(true)
+        currentPage = page
+        eventsPerPage = parseInt(limitSelect.value, 10) || 50
+        const skip = (currentPage - 1) * eventsPerPage
+        const unlabeledOnly = unlabeledOnlySwitch.checked
+        // Fetch classified events - assumes /events can filter appropriately or we filter client-side
+        const params = new URLSearchParams({
+            skip: skip,
+            limit: eventsPerPage,
+            unlabeled_only: unlabeledOnly.toString()
+        })
+        try {
+            const data = await fetchApi(
+                `${EVENTS_ENDPOINT}?${params.toString()}`,
+                {},
+                'isFetchingClassifications'
+            )
+            currentClassificationData = data.events || []
+            totalEvents = data.total_count || 0
+            renderClassificationTable(currentClassificationData)
+            renderPagination()
+            if (eventCountSpan)
+                eventCountSpan.textContent = `Total: ${totalEvents} | Page: ${currentPage} | Showing: ${currentClassificationData.length}`
+        } catch (error) {
+            renderClassificationTable([])
+            renderPagination()
+            if (eventCountSpan)
+                eventCountSpan.textContent = 'Total: - | Page: - | Showing: -'
+        } finally {
+            showLoading(false)
+            isFetchingClassifications = false
+        }
+    }
+
+    async function fetchKnownAttackTypes() {
+        if (knownAttackTypes.length > 0) return // Use cache
+        try {
+            const types = await fetchApi(ATTACK_TYPES_ENDPOINT) // Use common fetch
+            knownAttackTypes = types || []
+            populateAttackTypeSelect()
+            if (attackTypeLoadingError) attackTypeLoadingError.classList.add('d-none')
+        } catch (error) {
+            console.error('Failed to fetch attack types:', error)
+            if (attackTypeLoadingError)
+                attackTypeLoadingError.classList.remove('d-none')
+        }
+    }
+
+    function populateAttackTypeSelect() {
+        if (!attackTypeSelect) return
+        attackTypeSelect.innerHTML = '<option value="">-- Select Attack --</option>' // Reset
+        knownAttackTypes.forEach(type => {
+            // Exclude 'Normal' if it's listed as an attack type
+            if (type.type_name && type.type_name.toLowerCase() !== 'normal') {
+                const option = document.createElement('option')
+                option.value = type.type_name // Submit the name
+                option.textContent = type.type_name
+                attackTypeSelect.appendChild(option)
+            }
+        })
+    }
+
+    // --- Modal & Classification Logic ---
+    function showClassificationModal(eventUid) {
+        if (!classificationModal || !modalEventUid) return
+        const event = currentClassificationData.find(e => e.event_uid === eventUid)
+        if (!event) {
+            showError(`Details not found for event UID: ${eventUid}`)
+            return
+        }
+
+        modalEventUid.textContent = event.event_uid
+        modalTimestamp.textContent = formatTimestamp(event.timestamp)
+        modalPrediction.textContent = event.prediction === 1 ? 'Attack' : 'Normal'
+        modalCurrentLabel.textContent = event.human_label || 'None'
+        try {
+            modalFeaturesData.textContent = JSON.stringify(
+                event.features_data,
+                null,
+                2
+            )
+        } catch (e) {
+            modalFeaturesData.textContent = 'Error displaying features.'
+        }
+
+        classifyEventUidInput.value = event.event_uid
+        classifySubmitStatus.textContent = ''
+        classifySubmitStatus.className = 'mt-2 small'
+        if (submitClassificationButton) submitClassificationButton.disabled = false
+        if (submitClassificationSpinner)
+            submitClassificationSpinner.classList.add('d-none')
+
+        // Reset dynamic fields
+        if (attackTypeSelect) attackTypeSelect.value = ''
+        if (newAttackTypeName) newAttackTypeName.value = ''
+        if (newAttackTypeDesc) newAttackTypeDesc.value = ''
+        if (attackTypeSelectGroup) attackTypeSelectGroup.style.display = 'none'
+        if (newAttackTypeGroup) newAttackTypeGroup.style.display = 'none'
+
+        // Pre-select classification type based on current label or prediction
+        let defaultClassification = event.prediction === 1 ? 'Attack' : 'Normal'
+        if (event.human_label) {
+            if (
+                event.human_label.toLowerCase() === 'normal' ||
+                event.human_label.toLowerCase().includes('false positive')
+            ) {
+                defaultClassification = 'Normal'
+            } else if (
+                knownAttackTypes.some(t => t.type_name === event.human_label)
+            ) {
+                defaultClassification = 'Attack'
+                // Also pre-select the specific attack type dropdown
+                setTimeout(() => {
+                    if (attackTypeSelect) attackTypeSelect.value = event.human_label
+                }, 0) // Timeout ensures dropdown is visible first
+            } else if (event.human_label.toLowerCase() !== 'uncertain') {
+                // Assume it might be a previously defined 'Other' type
+                defaultClassification = 'Other'
+                if (newAttackTypeName) newAttackTypeName.value = event.human_label // Pre-fill name
+            }
+        }
+        document
+            .querySelector(
+                `#classificationForm input[name="classificationType"][value="${defaultClassification}"]`
+            )
+            ?.click() // Trigger click to show/hide sections
+
+        fetchKnownAttackTypes() // Ensure dropdown is populated
+        classificationModal.show()
+    }
+
+    function handleClassificationTypeChange() {
+        const selectedType = document.querySelector(
+            '#classificationForm input[name="classificationType"]:checked'
+        )?.value
+        if (attackTypeSelectGroup)
+            attackTypeSelectGroup.style.display =
+                selectedType === 'Attack' ? 'block' : 'none'
+        if (newAttackTypeGroup)
+            newAttackTypeGroup.style.display =
+                selectedType === 'Other' ? 'block' : 'none'
+    }
+
+    async function handleClassificationSubmit(event) {
+        event.preventDefault()
+        if (
+            !classificationForm ||
+            !submitClassificationButton ||
+            !submitClassificationSpinner ||
+            !classifyEventUidInput ||
+            !classifySubmitStatus
+        )
+            return
+
+        classifySubmitStatus.textContent = ''
+        submitClassificationButton.disabled = true
+        submitClassificationSpinner.classList.remove('d-none')
+        const eventUid = classifyEventUidInput.value
+        const classificationType = classificationForm.querySelector(
+            'input[name="classificationType"]:checked'
+        )?.value
+        let finalLabel = null
+
+        if (classificationType === 'Normal') {
+            finalLabel = 'Normal' // Or "False Positive" - needs consistency with backend/retraining
+        } else if (classificationType === 'Attack') {
+            finalLabel = attackTypeSelect?.value
+            if (!finalLabel) {
+                classifySubmitStatus.textContent =
+                    'Error: Please select a known attack type.'
+                classifySubmitStatus.className = 'mt-2 small text-danger'
+                submitClassificationButton.disabled = false
+                submitClassificationSpinner.classList.add('d-none')
+                return
+            }
+        } else if (classificationType === 'Other') {
+            finalLabel = newAttackTypeName?.value.trim()
+            if (!finalLabel) {
+                classifySubmitStatus.textContent =
+                    'Error: Please enter a name for the new attack type.'
+                classifySubmitStatus.className = 'mt-2 small text-danger'
+                submitClassificationButton.disabled = false
+                submitClassificationSpinner.classList.add('d-none')
+                return
+            }
+            // Optional: Send description along if backend supports it
+            // const description = newAttackTypeDesc?.value.trim();
+        }
+
+        if (!eventUid || !finalLabel) {
+            classifySubmitStatus.textContent = 'Error: Missing event UID or label.'
+            classifySubmitStatus.className = 'mt-2 small text-danger'
+            submitClassificationButton.disabled = false
+            submitClassificationSpinner.classList.add('d-none')
+            return
+        }
+
+        // Use the standard LABEL_ENDPOINT - the backend needs to handle 'new' types based on name
+        const payload = { event_uid: eventUid, human_label: finalLabel }
+        try {
+            const result = await fetchApi(LABEL_ENDPOINT, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            classifySubmitStatus.textContent = `Classification submitted as '${finalLabel}'. Refreshing...`
+            classifySubmitStatus.className = 'mt-2 small text-success'
+            setTimeout(() => {
+                classificationModal?.hide()
+                fetchClassifications(currentPage)
+            }, 1500) // Refresh current page
+        } catch (error) {
+            classifySubmitStatus.textContent = `Error: ${error.message}`
+            classifySubmitStatus.className = 'mt-2 small text-danger'
+            submitClassificationButton.disabled = false
+            submitClassificationSpinner.classList.add('d-none')
+        }
+    }
+
+    // --- Pagination ---
+    function renderPagination() {
+        /* ... (Same logic as events log) ... */
+    }
+    function changePage(newPage) {
+        const totalPages = Math.ceil(totalEvents / eventsPerPage)
+        if (newPage >= 1 && newPage <= totalPages && newPage !== currentPage) {
+            fetchClassifications(newPage)
+        }
+    }
+
+    // --- Refresh Function ---
+    function refreshPageData() {
+        console.log('Refreshing classification page data...')
+        fetchClassifications(currentPage)
+        fetchKnownAttackTypes()
+    } // Also refresh known types
+
+    // --- Event Listeners ---
+    unlabeledOnlySwitch?.addEventListener('change', () => fetchClassifications(1)) // Reset to page 1 on filter change
+    limitSelect?.addEventListener('change', () => fetchClassifications(1)) // Reset to page 1 on limit change
+    classificationForm?.addEventListener('submit', handleClassificationSubmit)
+    document
+        .querySelectorAll('#classificationForm input[name="classificationType"]')
+        .forEach(radio => {
+            radio.addEventListener('change', handleClassificationTypeChange)
+        })
+    // Global refresh listener is in base.html
+
+    // --- Initial Load ---
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!classificationModal)
+            console.error('Classification modal instance error.')
+        eventsPerPage = parseInt(limitSelect?.value ?? '50', 10) // Sync initial limit
+        refreshPageData() // Fetch initial data
+    })
+</script>
+{% endblock %}

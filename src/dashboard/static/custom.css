@@ -1,73 +1,167 @@
-/* src/dashboard/static/custom.css - Modern Dark Theme v3 */
+/* src/dashboard/static/custom.css - Modern Dark Theme v5 - Immersive */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-    --body-bg: #11131a;         /* Very dark background */
-    --text-color: #e0e0e0;      /* Off-white text */
-    --border-color: #2a2e3a;     /* Darker border */
-    --card-bg: #1c1f29;          /* Dark card background */
-    --sidebar-bg: #16181f;       /* Slightly different sidebar bg */
-    --hover-bg: #252934;         /* Hover background */
-    --primary-color: #00aaff;    /* Techy cyan/blue */
-    --primary-rgb: 0, 170, 255;
-    --secondary-color: #6c757d;  /* Muted grey */
-    --danger-color: #f44336;
-    --warning-color: #ff9800;
-    --success-color: #4caf50;
-    --info-color: #2196f3;
+    /* Core Palette - Slightly adjusted for depth */
+    --body-bg: #0a0e13;         /* Even deeper base */
+    --card-bg: #12171f;         /* Slightly richer card bg */
+    --sidebar-bg: #0e1218;      /* Sidebar distinct from body */
+    --hover-bg: #1a2029;        /* Hover background */
+    --text-color: #cdd5df;      /* Slightly softer main text */
+    /* --text-muted: #909aab; */    /* Original Muted grey */
+    --text-muted: #a0acbf;      /* ADJUSTED: Brighter Muted grey */
+    --text-subtle: #b8c2d1;     /* NEW: Subtle text, brighter than muted */
+    --border-color: #2a303a;    /* Softer border */
+    /* ... rest of :root variables ... */
 
+    /* Accent & Status Colors - Vibrant but harmonious */
+    --primary-color: #3498db;   /* Brighter, classic blue */
+    --primary-rgb: 52, 152, 219;
+    --secondary-color: #7f8c8d; /* Cool grey */
+    --secondary-rgb: 127, 140, 141;
+    --success-color: #2ecc71;   /* Emerald green */
+    --success-rgb: 46, 204, 113;
+    --warning-color: #f39c12;   /* Bright orange */
+    --warning-rgb: 243, 156, 18;
+    --danger-color: #e74c3c;    /* Alizarin red */
+    --danger-rgb: 231, 76, 60;
+    --info-color: #9b59b6;      /* Amethyst purple */
+    --info-rgb: 155, 89, 182;
+
+    /* Shadows & Glows */
+    --shadow-color-soft: rgba(0, 0, 0, 0.2);
+    --shadow-color-medium: rgba(0, 0, 0, 0.35);
+    --shadow-color-hard: rgba(0, 0, 0, 0.5);
+    --glow-primary-color: rgba(var(--primary-rgb), 0.3);
+    --glow-primary-color-intense: rgba(var(--primary-rgb), 0.45);
+
+    /* Enhanced Shadows */
+    --box-shadow-sm: 0 2px 5px var(--shadow-color-soft);
+    --box-shadow: 0 5px 15px var(--shadow-color-medium);
+    --box-shadow-lg: 0 10px 30px var(--shadow-color-hard);
+    --box-shadow-primary-glow: 0 0 12px var(--glow-primary-color);
+    --box-shadow-primary-glow-lg: 0 0 20px var(--glow-primary-color-intense);
+    --text-shadow-primary: 0 0 8px var(--glow-primary-color);
+
+    /* Typography & Layout */
     --font-family-sans-serif: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --box-shadow-sm: 0 .125rem .25rem rgba(0,0,0,.075);
-    --box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
-    --box-shadow-lg: 0 1rem 3rem rgba(0,0,0,.175);
-    --border-radius: 0.5rem; /* Consistent rounded corners */
+    --border-radius: 0.7rem;    /* Slightly more rounded */
+    --border-radius-sm: 0.5rem;
+    --transition-speed: 0.2s;
+    --transition-func: ease-in-out;
+    
+    --sidebar-width: 250px; /* Define sidebar width as a variable */
 }
 
-/* Apply base theme */
+/* Base Theme */
 body {
     background-color: var(--body-bg);
     color: var(--text-color);
     font-family: var(--font-family-sans-serif);
-    font-size: 15px; /* Slightly smaller base font */
+    font-size: 15px;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
+    overflow-x: hidden; /* Prevent horizontal scroll */
 }
-main { flex: 1 0 auto; }
-footer { flex-shrink: 0; }
+
+main {
+    flex: 1 0 auto;
+}
+
+footer {
+    flex-shrink: 0;
+}
+
+a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color var(--transition-speed) var(--transition-func);
+}
+
+a:hover {
+    color: color-mix(in srgb, var(--primary-color) 80%, white);
+    text-decoration: underline; /* Add underline on hover for clarity */
+}
 
 /* --- Header --- */
 .navbar {
+    /* ... existing styles ... */
     background-color: var(--card-bg) !important;
     border-bottom: 1px solid var(--border-color);
-    box-shadow: var(--box-shadow-sm);
-    z-index: 1030;
+    box-shadow: var(--box-shadow);
+    z-index: 1030; /* Ensure header is above sidebar */
     padding: 0.75rem 1rem;
+    /* Add transition for margin-left */
+    transition: background-color var(--transition-speed) var(--transition-func),
+                margin-left var(--transition-speed) var(--transition-func);
+    margin-left: 0; /* Default state (when collapsed or mobile) */
 }
+
 .navbar-brand {
     font-weight: 600;
     color: #fff !important;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.3);
 }
+
 .navbar-brand .bi {
     color: var(--primary-color);
+    vertical-align: -0.125em;
+    font-size: 1.3em;
+    filter: drop-shadow(0 0 5px var(--glow-primary-color)); /* Subtle icon glow */
+    transition: filter var(--transition-speed) var(--transition-func);
 }
+.navbar-brand:hover .bi {
+    filter: drop-shadow(0 0 8px var(--glow-primary-color-intense));
+}
+
 .navbar .nav-link {
-    color: var(--secondary-color);
-    transition: color 0.2s ease;
+    color: var(--text-muted);
+    transition: color var(--transition-speed) var(--transition-func);
 }
-.navbar .nav-link:hover {
+
+.navbar .nav-link:hover,
+.navbar .navbar-text { /* Style username text */
     color: #fff;
 }
+
+/* API Status Badge - Enhanced Styling */
 #apiStatus {
     font-size: 0.75rem;
-    padding: 0.3em 0.65em;
+    padding: 0.35em 0.75em; /* Slightly larger padding */
     font-weight: 500;
+    border: 1px solid transparent;
+    transition: all var(--transition-speed) var(--transition-func);
+    box-shadow: var(--box-shadow-sm); /* Add subtle shadow to badge */
 }
-#apiStatus.bg-success { background-color: rgba(var(--success-color), 0.2) !important; color: var(--success-color) !important; }
-#apiStatus.bg-warning { background-color: rgba(var(--warning-color), 0.2) !important; color: var(--warning-color) !important; }
-#apiStatus.bg-danger { background-color: rgba(var(--danger-color), 0.2) !important; color: var(--danger-color) !important; }
 
+#apiStatus.bg-success {
+    background-color: rgba(var(--success-rgb), 0.2) !important;
+    color: var(--success-color) !important;
+    border-color: rgba(var(--success-rgb), 0.5);
+    text-shadow: 0 0 5px rgba(var(--success-rgb), 0.3);
+}
+
+#apiStatus.bg-warning {
+    background-color: rgba(var(--warning-rgb), 0.2) !important;
+    color: var(--warning-color) !important;
+    border-color: rgba(var(--warning-rgb), 0.5);
+    text-shadow: 0 0 5px rgba(var(--warning-rgb), 0.3);
+}
+
+#apiStatus.bg-danger {
+    background-color: rgba(var(--danger-rgb), 0.2) !important;
+    color: var(--danger-color) !important;
+    border-color: rgba(var(--danger-rgb), 0.5);
+    text-shadow: 0 0 5px rgba(var(--danger-rgb), 0.3);
+}
+
+#apiStatus.bg-secondary {
+    background-color: rgba(var(--secondary-rgb), 0.15) !important;
+    color: var(--secondary-color) !important;
+    border-color: rgba(var(--secondary-rgb), 0.4);
+}
 
 /* --- Sidebar --- */
 .sidebar {
@@ -76,74 +170,149 @@ footer { flex-shrink: 0; }
     bottom: 0;
     left: 0;
     z-index: 1020;
-    padding: 65px 0 0; /* Adjust for navbar height + padding */
+    padding: 65px 0 0; /* Match header height */
     background-color: var(--sidebar-bg);
     border-right: 1px solid var(--border-color);
-    width: 250px;
+    width: var(--sidebar-width); /* Use variable */
+    box-shadow: 3px 0 15px rgba(0,0,0,0.2); /* Subtle shadow */
+    transition: transform var(--transition-speed) var(--transition-func); /* Add transition for potential future slide-in/out */
 }
+
+/* Hide sidebar off-screen when collapsed (using transform) */
+body.sidebar-collapsed .sidebar {
+    transform: translateX(calc(-1 * var(--sidebar-width)));
+}
+
 .sidebar-sticky {
     height: calc(100vh - 65px);
     padding-top: 1rem;
     overflow-x: hidden;
     overflow-y: auto;
 }
+
 .sidebar .nav-link {
     font-weight: 500;
-    color: #adb5bd; /* Lighter grey */
-    padding: 0.75rem 1.5rem;
+    color: var(--text-muted); /* Use muted text */
+    padding: 0.8rem 1.5rem;
     display: flex;
     align-items: center;
-    border-left: 3px solid transparent; /* Indicator for active */
-    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out, border-left-color 0.15s ease-in-out;
+    border-left: 4px solid transparent;
+    transition: all var(--transition-speed) var(--transition-func), transform 0.1s ease-out;
+    margin-bottom: 2px;
+    position: relative; /* For potential pseudo-elements */
 }
+
 .sidebar .nav-link .bi {
     margin-right: 1rem;
     font-size: 1.2rem;
     width: 24px;
     text-align: center;
-    color: var(--secondary-color);
-    transition: color 0.15s ease-in-out;
+    color: var(--secondary-color); /* Use secondary color for icons */
+    transition: color var(--transition-speed) var(--transition-func), transform var(--transition-speed) var(--transition-func);
 }
+
 .sidebar .nav-link:hover {
     color: #fff;
     background-color: var(--hover-bg);
+    border-left-color: color-mix(in srgb, var(--primary-color) 50%, transparent); /* Subtle border hint */
+    transform: translateX(4px); /* Slight nudge on hover */
 }
-.sidebar .nav-link.active {
-    color: #fff;
-    background-color: var(--hover-bg);
-    border-left-color: var(--primary-color);
-}
-.sidebar .nav-link.active .bi,
 .sidebar .nav-link:hover .bi {
     color: var(--primary-color);
+    transform: scale(1.1); /* Icon emphasis */
 }
+
+.sidebar .nav-link.active {
+    color: #fff;
+    background-color: rgba(var(--primary-rgb), 0.15); /* Slightly stronger active bg */
+    border-left-color: var(--primary-color);
+    /* Add a subtle glow effect */
+    box-shadow: inset 3px 0 0 var(--primary-color), /* Keep border */
+               -5px 0 15px -8px var(--glow-primary-color); /* Subtle side glow */
+}
+
+.sidebar .nav-link.active .bi {
+    color: var(--primary-color);
+    filter: drop-shadow(0 0 6px var(--glow-primary-color)); /* Glow for active icon */
+}
+
 .sidebar-heading {
     font-size: .8rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px; /* Wider spacing */
     padding: 0.75rem 1.5rem;
     margin-top: 1.5rem;
-    color: var(--secondary-color);
+    color: var(--secondary-color); /* Use secondary color */
     font-weight: 600;
 }
-.sidebar .controls-section { padding: 0 1.5rem; }
-.sidebar .controls-section .form-label,
-.sidebar .controls-section .form-check-label { font-size: 0.875rem; color: #adb5bd; }
-.sidebar .form-control, .sidebar .form-select { font-size: 0.875rem; }
 
-/* --- Main Content --- */
-.main-content {
-    margin-left: 250px; /* Match sidebar width */
-    padding: 2rem;
+.sidebar .controls-section {
+    padding: 0 1.5rem;
 }
-.main-content .page-header {
+
+.sidebar .controls-section .form-label,
+.sidebar .controls-section .form-check-label {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.sidebar .form-control,
+.sidebar .form-select {
+    font-size: 0.875rem;
+    background-color: var(--hover-bg); /* Consistent with hover */
+    border-color: var(--border-color);
+    color: var(--text-color);
+    border-radius: var(--border-radius-sm);
+    transition: border-color var(--transition-speed) var(--transition-func), box-shadow var(--transition-speed) var(--transition-func);
+}
+.sidebar .form-control:focus,
+.sidebar .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2); /* Subtle focus ring */
+}
+
+.sidebar .form-check-input {
+    border-color: var(--border-color);
+}
+
+.sidebar .btn {
+    font-size: 0.875rem;
+    border-radius: var(--border-radius-sm);
+}
+
+.main-content {
+    min-height: calc(100vh - 65px); /* Match header height */
+    padding-top: 1.5rem; /* Add some top padding */
+    padding-bottom: 3rem; /* Ensure space above footer */
+    transition: margin-left var(--transition-speed) var(--transition-func); /* Smooth transition */
+    /* Default margin is 0 */
+    margin-left: 0;
+}
+
+/* Default state (sidebar visible or should take space) */
+body:not(.sidebar-collapsed) #sidebarMenu + .main-content {
+    margin-left: var(--sidebar-width); /* Sidebar width */
+}
+
+/* State when sidebar is collapsed */
+body.sidebar-collapsed .main-content {
+    margin-left: 0;
+}
+
+body.sidebar-collapsed .navbar {
+    margin-left: 0;
+}
+
+.main-content .page-header { /* Style the page header element itself */
     margin-bottom: 2rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border-color);
 }
+
 .main-content .page-header h1 {
-    font-weight: 300; /* Lighter title weight */
+    font-weight: 500; /* Slightly bolder */
     color: #fff;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
 }
 
 /* --- Cards --- */
@@ -151,61 +320,522 @@ footer { flex-shrink: 0; }
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    box-shadow: var(--box-shadow-sm);
+    box-shadow: var(--box-shadow); /* Use enhanced shadow */
     color: var(--text-color);
-    height: 100%; /* Ensure cards in a row have same height */
+    height: 100%;
+    overflow: hidden; /* Important for consistent look */
+    transition: transform var(--transition-speed) var(--transition-func), box-shadow var(--transition-speed) var(--transition-func);
 }
-.stat-card .card-body { padding: 1.5rem; text-align: center; }
-.stat-card .stat-icon { font-size: 2rem; margin-bottom: 0.75rem; opacity: 0.7; }
-.stat-card .stat-value { font-size: 2.25rem; font-weight: 600; line-height: 1.1; margin-bottom: 0.25rem; }
-.stat-card .stat-label { font-size: 0.9rem; color: var(--secondary-color); }
-.placeholder-glow .placeholder { background-color: var(--hover-bg); }
+
+.card:hover {
+    transform: translateY(-4px); /* Slightly more lift */
+    box-shadow: var(--box-shadow-lg); /* Stronger shadow on hover */
+}
+
+.card-header {
+    background-color: rgba(var(--body-bg), 0.4); /* Darker, semi-transparent header */
+    border-bottom: 1px solid var(--border-color);
+    font-weight: 600;
+    padding: 0.85rem 1.35rem; /* Adjust padding */
+    font-size: 1rem; /* Slightly larger header text */
+    color: #fff; /* Ensure header text is white */
+}
+
+.card-body {
+    padding: 1.5rem;
+}
+
+/* Stat Card Enhancements */
+.stat-card .card-body {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.stat-card .stat-icon {
+    font-size: 2.5rem; /* Larger icon */
+    margin-bottom: 1rem;
+    opacity: 0.9;
+    line-height: 1;
+    color: var(--primary-color); /* Use primary color for icon */
+    filter: drop-shadow(0 0 8px var(--glow-primary-color)); /* Icon glow */
+}
+
+.stat-card .stat-value {
+    font-size: 2.75rem; /* Larger value */
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 0.35rem;
+    color: #fff; /* Ensure value is white */
+}
+
+.stat-card .stat-label {
+    font-size: 0.95rem; /* Slightly larger label */
+    color: var(--text-muted);
+}
+
+.placeholder-glow .placeholder {
+    background-color: var(--hover-bg);
+    border-radius: var(--border-radius-sm);
+    opacity: 0.5; /* Make placeholder more subtle */
+}
 
 /* --- Charts --- */
-.chart-card { padding: 1.5rem; }
-.chart-container { height: 320px; width: 100%; }
+.chart-card {
+    padding: 0;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    overflow: hidden; /* Ensure chart stays within bounds */
+}
+
+.chart-card .card-header {
+    font-size: 1rem;
+    background-color: rgba(var(--body-bg), 0.4);
+    border-bottom: 1px solid var(--border-color);
+    color: #fff;
+}
+
+.chart-container {
+    height: 320px; /* Slightly taller */
+    width: 100%;
+    padding: 1.25rem; /* More padding around chart */
+}
 
 /* --- Tables --- */
 .table-container {
     background-color: var(--card-bg);
     border-radius: var(--border-radius);
     border: 1px solid var(--border-color);
-    box-shadow: var(--box-shadow-sm);
-    overflow: hidden;
+    box-shadow: var(--box-shadow);
+    overflow: hidden; /* Needed for border-radius */
 }
-.table { margin-bottom: 0; }
+
+.table {
+    margin-bottom: 0;
+    color: var(--text-color);
+    border-collapse: separate; /* Allows spacing/styling between rows */
+    border-spacing: 0;
+}
+
 .table thead th {
-    background-color: var(--sidebar-bg); /* Match sidebar */
-    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(var(--body-bg), 0.4); /* Match card header */
+    border-bottom: 2px solid var(--border-color); /* Stronger header separator */
     border-top: none;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--secondary-color);
-    padding: 0.75rem 1rem;
+    letter-spacing: 0.6px; /* Adjust spacing */
+    color: var(--text-muted);
+    padding: 0.85rem 1rem; /* Adjust padding */
+    white-space: nowrap;
+    position: sticky; /* Make header sticky if table scrolls */
+    top: 0;
+    z-index: 10;
 }
-.table tbody tr { border-top: 1px solid var(--border-color); }
-.table tbody tr:first-child { border-top: none; }
-.table-hover > tbody > tr:hover > * { background-color: var(--hover-bg); color: var(--text-color); }
-.table td, .table th { vertical-align: middle; padding: 0.75rem 1rem; font-size: 0.9rem; }
-.table .btn-sm { padding: 0.25rem 0.6rem; font-size: 0.8rem; }
-.table .badge { font-weight: 500; }
+
+.table tbody tr {
+    border-top: 1px solid var(--border-color);
+    transition: background-color var(--transition-speed) var(--transition-func);
+}
+
+.table tbody tr:first-child {
+    border-top: none;
+}
+
+.table-hover>tbody>tr:hover>* {
+    background-color: var(--hover-bg);
+    color: #fff; /* Brighter text on hover */
+}
+
+.table td,
+.table th {
+    vertical-align: middle;
+    padding: 0.85rem 1rem; /* Consistent padding */
+    font-size: 0.9rem;
+}
+
+.table .btn-sm {
+    padding: 0.3rem 0.7rem; /* Adjust button padding */
+    font-size: 0.8rem;
+    border-radius: var(--border-radius-sm);
+}
+
+.table .badge {
+    font-weight: 500;
+    font-size: 0.75rem;
+    padding: .4em .7em; /* Adjust badge padding */
+    border: 1px solid transparent;
+    box-shadow: var(--box-shadow-sm); /* Add shadow to badges */
+}
+
+.table .font-monospace {
+    font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    color: var(--text-muted);
+    background-color: rgba(var(--body-bg), 0.3); /* Subtle background for mono */
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+    font-size: 0.85em;
+}
+
+/* Custom badge colors - Enhanced */
+.badge.bg-success-subtle {
+    background-color: rgba(var(--success-rgb), 0.15) !important;
+    color: var(--success-color) !important;
+    border-color: rgba(var(--success-rgb), 0.4);
+    text-shadow: 0 0 4px rgba(var(--success-rgb), 0.2);
+}
+
+.badge.bg-danger-subtle {
+    background-color: rgba(var(--danger-rgb), 0.15) !important;
+    color: var(--danger-color) !important;
+    border-color: rgba(var(--danger-rgb), 0.4);
+    text-shadow: 0 0 4px rgba(var(--danger-rgb), 0.2);
+}
+
+.badge.bg-warning-subtle {
+    background-color: rgba(var(--warning-rgb), 0.15) !important;
+    color: var(--warning-color) !important;
+    border-color: rgba(var(--warning-rgb), 0.4);
+    text-shadow: 0 0 4px rgba(var(--warning-rgb), 0.2);
+}
+
+.badge.bg-info-subtle {
+    background-color: rgba(var(--info-rgb), 0.15) !important;
+    color: var(--info-color) !important;
+    border-color: rgba(var(--info-rgb), 0.4);
+    text-shadow: 0 0 4px rgba(var(--info-rgb), 0.2);
+}
+
+.badge.bg-secondary-subtle {
+    background-color: rgba(var(--secondary-rgb), 0.1) !important;
+    color: var(--secondary-color) !important;
+    border-color: rgba(var(--secondary-rgb), 0.4);
+}
 
 /* --- Modal --- */
-.modal-content { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--border-radius); }
-.modal-header { border-bottom: 1px solid var(--border-color); }
-.modal-footer { border-top: 1px solid var(--border-color); }
-#eventDetailsModal .modal-body pre { background-color: var(--body-bg); border: 1px solid var(--border-color); border-radius: 4px; }
+.modal-content {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow-lg); /* Strong shadow for modals */
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(var(--body-bg), 0.4); /* Match card header */
+    color: #fff;
+}
+.modal-header .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%); /* Make close button white */
+}
+
+.modal-footer {
+    border-top: 1px solid var(--border-color);
+    background-color: rgba(var(--body-bg), 0.2); /* Subtle footer background */
+}
+
+#eventDetailsModal .modal-body pre,
+#classificationModal .modal-body pre {
+    background-color: var(--body-bg); /* Use main body bg for contrast */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    padding: 1rem;
+    font-size: 0.85rem;
+    max-height: 350px; /* Allow slightly more height */
+    color: var(--text-muted); /* Muted text for pre */
+}
 
 /* --- Other --- */
-.spinner-container { min-height: 200px; display: flex; align-items: center; justify-content: center; }
-.dashboard-section { display: none; }
-.dashboard-section.active { display: block; animation: fadeIn 0.5s ease-out; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
-footer { background-color: var(--sidebar-bg); border-top: 1px solid var(--border-color); padding: 1rem 0; color: var(--secondary-color); }
+.spinner-container {
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.spinner-border { /* Ensure spinner uses primary color */
+    color: var(--primary-color);
+}
 
-/* Status indicators in table */
-.status-indicator { width: 8px; height: 8px; }
-.prediction-badge { font-size: 0.8em; padding: .3em .5em; }
-.label-badge { font-size: 0.8em; padding: .3em .5em; }
+footer {
+    background-color: var(--sidebar-bg); /* Match sidebar */
+    border-top: 1px solid var(--border-color);
+    padding: 1rem 0;
+    color: var(--secondary-color); /* Use secondary color */
+    font-size: 0.85rem;
+    box-shadow: 0 -3px 10px rgba(0,0,0,0.2); /* Add top shadow */
+}
+
+/* Forms Enhancements */
+.form-control,
+.form-select {
+    background-color: var(--hover-bg); /* Use hover bg for inputs */
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    border-radius: var(--border-radius-sm);
+    padding: 0.5rem 0.85rem; /* Adjust padding */
+    transition: border-color var(--transition-speed) var(--transition-func), box-shadow var(--transition-speed) var(--transition-func), background-color var(--transition-speed) var(--transition-func);
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--card-bg); /* Slightly different bg on focus */
+    border-color: var(--primary-color);
+    color: var(--text-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.25), /* Outer glow */
+               inset 0 1px 2px rgba(0,0,0,0.2); /* Subtle inner shadow */
+}
+
+.form-control::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.form-control-plaintext {
+    color: var(--text-color);
+}
+
+.form-check-input {
+    background-color: var(--hover-bg);
+    border: 1px solid var(--border-color);
+    transition: background-color var(--transition-speed) var(--transition-func), border-color var(--transition-speed) var(--transition-func);
+}
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 6px var(--glow-primary-color); /* Glow on checked */
+}
+.form-check-input:focus {
+     box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.25);
+}
+
+/* Button Enhancements */
+.btn {
+    border-radius: var(--border-radius-sm);
+    padding: 0.5rem 1rem; /* Standard button padding */
+    font-weight: 500;
+    transition: all var(--transition-speed) var(--transition-func), transform 0.1s ease-out;
+    box-shadow: var(--box-shadow-sm);
+}
+.btn:hover {
+    transform: translateY(-2px); /* Lift effect */
+    box-shadow: var(--box-shadow); /* Stronger shadow on hover */
+}
+.btn:active {
+    transform: translateY(0px); /* Press effect */
+    box-shadow: var(--box-shadow-sm);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff; /* Ensure white text */
+}
+.btn-primary:hover {
+    background-color: color-mix(in srgb, var(--primary-color) 90%, black);
+    border-color: color-mix(in srgb, var(--primary-color) 90%, black);
+    box-shadow: var(--box-shadow-primary-glow-lg); /* Intense glow on hover */
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff; /* White text on hover */
+    box-shadow: var(--box-shadow-primary-glow); /* Glow on hover */
+}
+
+.btn-outline-secondary {
+    color: var(--secondary-color);
+    border-color: var(--secondary-color);
+}
+.btn-outline-secondary:hover {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: #fff;
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+    color: #fff;
+}
+.btn-success:hover {
+    background-color: color-mix(in srgb, var(--success-color) 90%, black);
+    border-color: color-mix(in srgb, var(--success-color) 90%, black);
+    box-shadow: 0 0 12px rgba(var(--success-rgb), 0.4); /* Success glow */
+}
+/* Add similar hover effects for warning/danger if needed */
+
+/* Pagination */
+.pagination .page-link {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--primary-color);
+    margin: 0 3px; /* Add spacing */
+    border-radius: var(--border-radius-sm); /* Rounded corners */
+    transition: all var(--transition-speed) var(--transition-func);
+}
+
+.pagination .page-link:hover {
+    background-color: var(--hover-bg);
+    border-color: var(--primary-color);
+    transform: translateY(-2px); /* Lift effect */
+    box-shadow: var(--box-shadow-sm);
+}
+
+.pagination .page-item.active .page-link {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #fff;
+    box-shadow: var(--box-shadow-primary-glow); /* Glow for active page */
+    transform: translateY(-1px);
+}
+
+.pagination .page-item.disabled .page-link {
+    background-color: var(--sidebar-bg);
+    border-color: var(--border-color);
+    color: var(--secondary-color);
+    opacity: 0.6;
+}
+/* --- Typography Enhancements --- */
+
+/* Enhance visibility of key descriptive text and labels */
+.lead.text-muted,                     /* Lead paragraphs */
+#publicHomeSection p.text-muted,      /* Specific paragraphs on public home */
+.card .card-text.text-muted,          /* General card text using .text-muted */
+.card-title.text-muted,               /* Card titles like "System Status" */
+.stat-label,                          /* Labels below stat values */
+.text-muted.text-center.py-4,         /* Placeholder text in empty card bodies */
+.modal-body small.text-muted,         /* Labels within modal bodies */
+#eventCount.text-muted,               /* Event count indicators */
+.page-header + p.text-muted,          /* Descriptive text directly after page headers */
+.sidebar .controls-section .form-label, /* Sidebar form labels */
+.card-body p.text-muted.small,        /* Small muted paragraphs in standard cards (like settings main) */
+.card.bg-dark p.text-muted,           /* Paragraphs in the dark info card */
+.card.bg-dark ol.text-muted,          /* Ordered list in the dark info card */
+.card.bg-dark ol.text-muted li        /* List items in the dark info card */
+ {
+    color: var(--text-subtle) !important; /* Use the brighter subtle color */
+    /* Optional: Slightly increase font-weight for labels if needed */
+    /* font-weight: 500; */
+}
+
+/* Ensure OTHER small muted text remains relatively muted */
+/* Restore !important to prevent this being overridden by less specific rules, */
+/* BUT ensure any small text needing --text-subtle is included in the block above */
+/* with a more specific selector. */
+small.text-muted {
+    color: var(--text-muted) !important; /* Use the globally brightened muted color */
+}
+
+/* Keep table headers using the standard muted color (unless they also need brightening) */
+.table thead th {
+    color: var(--text-muted); /* Keep this unless specifically requested otherwise */
+}
+
+/* Adjust placeholder text color in forms */
+.form-control::placeholder {
+    color: var(--text-muted); /* Ensure it uses the updated muted color */
+    opacity: 0.8; /* Slightly less transparent */
+}
+
+/* Ensure footer text uses the standard muted color */
+footer {
+    /* ... existing footer styles ... */
+    color: var(--text-muted); /* Use the updated muted color */
+}
+
+/* Ensure sidebar headings use the standard muted color */
+.sidebar-heading {
+    /* ... existing sidebar-heading styles ... */
+    color: var(--text-muted);
+}
+
+/* Ensure text within pre tags in modals uses the standard muted color */
+#eventDetailsModal .modal-body pre,
+#classificationModal .modal-body pre {
+    /* ... existing pre styles ... */
+    color: var(--text-muted); /* Muted text for pre */
+}
+
+/* Ensure monospace text in tables uses standard muted */
+.table .font-monospace {
+    /* ... existing font-monospace styles ... */
+    color: var(--text-muted);
+}
+
+/* Style the specific dark info card in settings */
+#settingsSection .card.bg-dark {
+    background-color: var(--body-bg) !important; /* Use the deepest background */
+    border-color: var(--border-color); /* Keep consistent border */
+}
+
+#settingsSection .card.bg-dark .card-title {
+    color: var(--info-color) !important; /* Ensure info color stands out */
+}
+
+#radiant-title {
+    text-shadow: 0 0 7px rgba(173, 216, 230, 0.8),
+                 0 0 15px rgba(100, 180, 255, 0.6);
+    transition: text-shadow 0.3s ease-in-out;
+  }
+
+/* Responsive Adjustments */
+@media (max-width: 767.98px) {
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative; /* Change from fixed */
+        box-shadow: none;
+        padding-top: 0; /* Reset padding */
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        transform: none !important; /* Override the translateX for mobile */
+        margin-left: 0 !important; /* Ensure no weird margin */
+    }
+    
+    .sidebar-sticky {
+        height: auto;
+        padding-bottom: 1rem;
+    }
+
+    .main-content {
+        margin-left: 0 !important; /* Override margin for mobile */
+        padding-top: 1rem;
+    }
+
+    .navbar {
+        margin-left: 0 !important; /* Ensure header has no margin on mobile */
+   }
+    /* --- Enhanced Mobile Toggler --- */
+    .navbar-toggler {
+        /* border: 1px solid var(--border-color) !important; */ /* Original dim border */
+        border: 1px solid rgba(var(--primary-rgb), 0.4) !important; /* Brighter border using primary color */
+        /* padding: 0.25rem 0.5rem; */ /* Original padding */
+        padding: 0.4rem 0.7rem; /* Increased padding for easier tapping */
+        border-radius: var(--border-radius-sm); /* Add slight rounding */
+        transition: background-color var(--transition-speed) var(--transition-func), box-shadow var(--transition-speed) var(--transition-func);
+    }
+    .navbar-toggler:focus {
+        /* box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.25); */ /* Default focus */
+        /* Enhance focus state */
+        box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.35);
+        background-color: rgba(var(--primary-rgb), 0.1);
+    }
+    .navbar-toggler:hover {
+        background-color: rgba(var(--primary-rgb), 0.08); /* Subtle hover background */
+    }
+    .navbar-toggler .bi {
+        color: var(--primary-color);
+        font-size: 1.8rem; /* Slightly larger icon if needed, adjust fs-2 in HTML if changing */
+        vertical-align: middle; /* Better align icon vertically */
+    }
+    /* --- End Enhanced Mobile Toggler --- */
+}

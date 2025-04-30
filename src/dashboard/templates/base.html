@@ -1,41 +1,59 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{% block title %}WIDS Dashboard{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="{{ url_for('static', path='/custom.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/custom.css') }}" />
     {% block head %}{% endblock %}
 </head>
 
 <body>
+    {# Add id="pageBody" for easier JS targeting #}
     <header class="navbar sticky-top flex-md-nowrap p-0 shadow-sm">
-        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-6" href="{{ url_for('home') }}"> <i
-                class="bi bi-shield-shaded me-2"></i>WIDS Dashboard </a>
-        <button class="navbar-toggler d-md-none collapsed border-0 me-3" type="button" data-bs-toggle="collapse"
-            data-bs-target="#sidebarMenu"><i class="bi bi-list fs-2"></i></button>
+        {% if user %} {# REMOVED d-md-none from button #}
+        <button class="navbar-toggler collapsed me-3" type="button" data-bs-toggle="collapse"
+            data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <i class="bi bi-list fs-2"></i>
+        </button>
+        {% endif %}
+
+        <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3 fs-6" href="{{ url_for('public_home') }}">
+            <i class="bi bi-shield-shaded me-2"></i>WIDS Dashboard
+        </a>
         <div class="navbar-nav ms-auto">
-            <div class="nav-item text-nowrap d-flex align-items-center pe-3"> <span id="apiStatus"
-                    class="badge rounded-pill bg-secondary me-3">Connecting...</span> {% if user %}<span
-                    class="navbar-text me-3 d-none d-sm-inline"><i class="bi bi-person-circle me-1"></i> {{
-                    user.username }}</span><a class="nav-link px-3 text-white-50"
-                    href="{{ url_for('logout_and_redirect') }}" title="Logout"><i
-                        class="bi bi-box-arrow-right fs-5"></i></a>{% endif %} </div>
+            <div class="nav-item text-nowrap d-flex align-items-center pe-3">
+                <span id="apiStatus" class="badge rounded-pill bg-secondary me-3">Connecting...</span>
+                {% if user %}
+                <span class="navbar-text me-3 d-none d-sm-inline">
+                    <i class="bi bi-person-circle me-1"></i> {{ user.username }}
+                </span>
+                <a class="nav-link px-3 text-white-50" href="{{ url_for('logout_and_redirect') }}" title="Logout">
+                    <i class="bi bi-box-arrow-right fs-5"></i>
+                </a>
+                {% else %}
+                <a class="nav-link px-3 text-white-50" href="{{ url_for('login_page') }}" title="Login">
+                    <i class="bi bi-box-arrow-left fs-5"></i>
+                </a>
+                {% endif %}
+            </div>
         </div>
     </header>
 
     <div class="container-fluid">
         <div class="row">
-            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+            {% if user %} {# REMOVED d-md-block from nav #}
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 sidebar collapse">
                 <div class="sidebar-sticky">
                     <ul class="nav flex-column">
                         <li class="nav-item">
                             <a class="nav-link {% if active_page == 'home' %}active{% endif %}"
-                                href="{{ url_for('home') }}">
+                                href="{{ url_for('monitoring') }}">
                                 <i class="bi bi-speedometer2"></i> Monitoring
                             </a>
                         </li>
@@ -46,6 +64,19 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link {% if active_page == 'classifications' %}active{% endif %}"
+                                href="{{ url_for('classification') }}">
+                                <i class="bi bi-tags"></i> Classifications
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if active_page == 'mitigation' %}active{% endif %}"
+                                href="{{ url_for('mitigation') }}">
+                                <i class="bi bi-shield-slash"></i> Mitigation
+                            </a>
+                            {# Changed icon #}
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link {% if active_page == 'settings' %}active{% endif %}"
                                 href="{{ url_for('settings') }}">
                                 <i class="bi bi-gear"></i> Settings
@@ -53,94 +84,229 @@
                         </li>
                     </ul>
                     {% block sidebar_controls %}
-                    <h6 class="sidebar-heading"> Controls </h6>
+                    <h6 class="sidebar-heading">Controls</h6>
                     <ul class="nav flex-column mb-2 controls-section">
-                        <li class="nav-item mb-2"> <button id="refreshButton"
-                                class="btn btn-outline-primary btn-sm w-100"><i class="bi bi-arrow-clockwise"></i>
-                                Refresh Data</button> </li>
                         <li class="nav-item mb-2">
-                            <div class="form-check form-switch"> <input class="form-check-input" type="checkbox"
-                                    role="switch" id="unlabeledOnlySwitch" checked> <label class="form-check-label"
-                                    for="unlabeledOnlySwitch">Unlabeled Only</label> </div>
+                            <button id="refreshButton" class="btn btn-outline-primary btn-sm w-100">
+                                <i class="bi bi-arrow-clockwise"></i> Refresh Data
+                            </button>
                         </li>
-                        <li class="nav-item"> <label for="limitSelect" class="form-label">Events/Page:</label> <select
-                                class="form-select form-select-sm" id="limitSelect">
-                                <option value="50">50</option>
-                                <option value="100" selected>100</option>
-                                <option value="250">250</option>
-                                <option value="500">500</option>
-                            </select> </li>
                     </ul>
                     {% endblock %}
                 </div>
             </nav>
-
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+            {% endif %} {# REMOVED col-md-9 ms-sm-auto col-lg-10 #}
+            <main class="px-md-4 main-content">
                 <div id="loadingIndicator" class="spinner-container d-none">
-                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status"><span
-                            class="visually-hidden">Loading...</span></div>
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
                 </div>
                 <div id="errorDisplay" class="alert alert-danger d-none mt-3" role="alert"></div>
                 {% block content %}{% endblock %}
             </main>
-
         </div>
     </div>
-    <footer class="mt-auto py-3 text-center text-muted"> <small>WIDS Dashboard &copy; 2025</small> </footer>
+
+    <footer class="mt-auto py-3 text-center">
+        <small>WIDS Dashboard &copy; 2025</small>
+    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // --- Common Configuration & Utilities ---
-        const WIDS_API_BASE_URL = "{{ wids_api_base_url }}";
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const errorDisplay = document.getElementById('errorDisplay');
-        const apiStatusSpan = document.getElementById('apiStatus');
-        const refreshButton = document.getElementById('refreshButton');
-        const showLoading = (isLoading) => { loadingIndicator?.classList.toggle('d-none', !isLoading); if (refreshButton) refreshButton.disabled = isLoading; };
-        const showError = (message) => { if (!errorDisplay) return; errorDisplay.textContent = message; errorDisplay.classList.remove('d-none'); setApiStatus('danger', 'Error'); };
-        const hideError = () => { errorDisplay?.classList.add('d-none'); };
-        const formatTimestamp = (iso) => { if (!iso) return 'N/A'; try { return new Date(iso).toISOString().replace('T', ' ').substring(0, 19); } catch (e) { return 'Invalid Date'; } };
-        const setApiStatus = (status, text) => { if (!apiStatusSpan) return; apiStatusSpan.textContent = text; apiStatusSpan.className = `badge rounded-pill bg-${status} me-3`; };
+        const WIDS_API_BASE_URL = '{{ wids_api_base_url }}'
+        const loadingIndicator = document.getElementById('loadingIndicator')
+        const errorDisplay = document.getElementById('errorDisplay')
+        const apiStatusSpan = document.getElementById('apiStatus')
+        const refreshButton = document.getElementById('refreshButton') // Global refresh button
+        const pageBody = document.body // Get body element
+        const sidebarMenu = document.getElementById('sidebarMenu')
+        const SIDEBAR_STATE_KEY = 'widsSidebarState_v1' // Key for localStorage
+        const MOBILE_BREAKPOINT = 768 // Width below which mobile styles apply (matches CSS: max-width 767.98px)
 
-        // Generic API Fetch Function
-        async function fetchApi(url, options = {}, indicatorVar = null) {
-            // Basic fetch logic - can be expanded with more error details
-            if (indicatorVar && window[indicatorVar]) return;
-            if (indicatorVar) window[indicatorVar] = true;
-            hideError();
-            setApiStatus('warning', 'Fetching...');
+        const showLoading = isLoading => {
+            loadingIndicator?.classList.toggle('d-none', !isLoading)
+            if (refreshButton) refreshButton.disabled = isLoading
+        }
+        const showError = message => {
+            if (!errorDisplay) return
+            errorDisplay.textContent = message
+            errorDisplay.classList.remove('d-none')
+            setApiStatus('danger', 'Error')
+        }
+        const hideError = () => {
+            errorDisplay?.classList.add('d-none')
+        }
+        const formatTimestamp = iso => {
+            if (!iso) return 'N/A'
             try {
-                const response = await fetch(url, { ...options, headers: { 'Accept': 'application/json', ...options.headers } });
+                return new Date(iso).toISOString().replace('T', ' ').substring(0, 19)
+            } catch (e) {
+                return 'Invalid Date'
+            }
+        }
+        const setApiStatus = (status, text) => {
+            if (!apiStatusSpan) return
+            apiStatusSpan.textContent = text
+            apiStatusSpan.className = `badge rounded-pill bg-${status} me-3`
+        }
+
+        async function fetchApi(url, options = {}, indicatorVar = null) {
+            // ... (fetchApi function remains the same) ...
+            if (indicatorVar && window[indicatorVar]) {
+                console.log(`Fetch already in progress for ${indicatorVar}`)
+                return
+            }
+            if (indicatorVar) window[indicatorVar] = true
+            hideError()
+            setApiStatus('warning', 'Fetching...')
+            showLoading(true) // Show global loading indicator
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: { Accept: 'application/json', ...options.headers }
+                })
                 if (!response.ok) {
-                    let errorDetail = `API Error ${response.status}`;
-                    try { const errorJson = await response.json(); errorDetail = errorJson.detail || errorDetail; } catch (e) { /* Ignore */ }
-                    throw new Error(errorDetail);
+                    let errorDetail = `API Error ${response.status}`
+                    try {
+                        const errorJson = await response.json()
+                        errorDetail = errorJson.detail || errorDetail
+                    } catch (e) {
+                        errorDetail = await response.text()
+                    }
+                    throw new Error(errorDetail)
                 }
-                setApiStatus('success', 'Connected');
-                return await response.json();
+                setApiStatus('success', 'Connected')
+                return await response.json()
             } catch (error) {
-                console.error(`Fetch error (${url}):`, error);
-                showError(`Request failed: ${error.message}`);
-                throw error;
+                console.error(`Fetch error (${url}):`, error)
+                showError(`Request failed: ${error.message}`)
+                setApiStatus('danger', 'Error') // Ensure status reflects error
+                throw error
             } finally {
-                if (indicatorVar) window[indicatorVar] = false;
+                if (indicatorVar) window[indicatorVar] = false
+                showLoading(false) // Hide global loading indicator
             }
         }
 
-
-        // Global refresh listener (if refresh button is in base)
-        refreshButton?.addEventListener('click', () => {
-            // Find the active page script's refresh function if it exists
-            if (typeof refreshPageData === 'function') {
-                refreshPageData();
-            } else {
-                console.warn("No refreshPageData function defined for the current page.");
-                // Optionally reload the whole page as a fallback
-                // window.location.reload();
+        // --- Preference Handling ---
+        const PREFS_KEY = 'widsDashboardPrefs_v2' // Use new key if format changes
+        const DEFAULT_PREFS = { unlabeledOnly: true, limit: '100' }
+        function getPreferences() {
+            try {
+                const s = localStorage.getItem(PREFS_KEY)
+                return s
+                    ? { ...DEFAULT_PREFS, ...JSON.parse(s) }
+                    : { ...DEFAULT_PREFS }
+            } catch (e) {
+                console.error('Prefs error:', e)
+                return { ...DEFAULT_PREFS }
             }
-        });
+        }
+
+        function isMobileView() {
+            return window.innerWidth < MOBILE_BREAKPOINT
+        }
+
+        // Function called AFTER the sidebar is fully SHOWN (Desktop or Mobile)
+        function handleSidebarShown() {
+            if (pageBody) {
+                // Always remove 'sidebar-collapsed' when shown, regardless of view
+                pageBody.classList.remove('sidebar-collapsed')
+                localStorage.setItem(SIDEBAR_STATE_KEY, 'open')
+                console.log('Sidebar state saved: open (after shown)')
+            }
+        }
+
+        // Function called AFTER custom DESKTOP slide-out animation finishes
+        function handleSidebarSlideOutComplete() {
+            // Check again it's not mobile, in case of resize during transition
+            if (sidebarMenu && !isMobileView()) {
+                // Clean up Bootstrap classes AFTER animation
+                sidebarMenu.classList.remove('show')
+                sidebarMenu.classList.remove('collapsing') // Ensure this is removed
+                // Listener is removed by {once: true}
+                localStorage.setItem(SIDEBAR_STATE_KEY, 'closed') // Save state AFTER animation
+                console.log(
+                    'Sidebar state saved: closed (after desktop hidden animation)'
+                )
+            }
+        }
+
+        // Function called BEFORE Bootstrap starts hiding the sidebar
+        function handleSidebarHide(event) {
+            if (pageBody && sidebarMenu) {
+                if (isMobileView()) {
+                    // --- MOBILE VIEW ---
+                    // Let Bootstrap handle the collapse normally.
+                    // Just save the state.
+                    localStorage.setItem(SIDEBAR_STATE_KEY, 'closed')
+                    console.log('Sidebar state saved: closed (mobile hide event)')
+                    // DO NOT preventDefault()
+                    // DO NOT add 'sidebar-collapsed' class here for animation
+                    // DO NOT add transitionend listener
+                } else {
+                    // --- DESKTOP VIEW ---
+                    // Prevent Bootstrap's default animation.
+                    event.preventDefault()
+                    // Add class to trigger our CSS slide-out animation.
+                    pageBody.classList.add('sidebar-collapsed')
+                    // Listen for the end of OUR CSS transition to clean up.
+                    sidebarMenu.addEventListener(
+                        'transitionend',
+                        handleSidebarSlideOutComplete,
+                        { once: true }
+                    )
+                    console.log('Starting desktop sidebar hide animation...')
+                }
+            }
+        }
+
+        // Apply initial state FROM localStorage ON LOAD
+        if (sidebarMenu && pageBody) {
+            const initialSidebarState = localStorage.getItem(SIDEBAR_STATE_KEY)
+            console.log(
+                'Initial sidebar state from localStorage:',
+                initialSidebarState
+            )
+
+            // Apply classes based on state. Bootstrap/CSS handles layout.
+            if (initialSidebarState === 'closed') {
+                // Add 'sidebar-collapsed' for desktop margin logic (harmless on mobile CSS)
+                pageBody.classList.add('sidebar-collapsed')
+                // Remove 'show' so Bootstrap knows it's initially closed
+                sidebarMenu.classList.remove('show')
+                console.log('Applying initial state: closed')
+            } else {
+                // Default to 'open'
+                pageBody.classList.remove('sidebar-collapsed')
+                // Add 'show' so Bootstrap knows it's initially open
+                sidebarMenu.classList.add('show')
+                console.log('Applying initial state: open')
+            }
+        }
+
+        // Attach listeners AFTER setting initial state
+        if (sidebarMenu) {
+            sidebarMenu.addEventListener('shown.bs.collapse', handleSidebarShown)
+            sidebarMenu.addEventListener('hide.bs.collapse', handleSidebarHide)
+        }
+        // --- End Sidebar Persistence ---
+
+        // --- Global Refresh Listener ---
+        refreshButton?.addEventListener('click', () => {
+            if (typeof refreshPageData === 'function') {
+                console.log('Global refresh triggered.')
+                refreshPageData()
+            } else {
+                console.warn(
+                    'No refreshPageData function defined for the current page.'
+                )
+            }
+        })
     </script>
-    {% block scripts %}{% endblock %} {# Placeholder for page scripts #}
+    {% block scripts %} {% endblock %}
 </body>
 
 </html>

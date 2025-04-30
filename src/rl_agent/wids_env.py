@@ -1,165 +1,128 @@
 # src/rl_agent/wids_env.py
+# Custom Gymnasium environment for WIDS RL training.
+# Assumes input data is ALREADY SCALED.
 
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 import pandas as pd
 import logging
-from sklearn.preprocessing import MinMaxScaler, LabelEncoder
+from pathlib import Path
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+log = logging.getLogger(__name__)
 
 class WidsEnv(gym.Env):
     """
-    Custom Gymnasium Environment for WiFi Intrusion Detection.
-
-    Assumes input data is a preprocessed CSV file where each row represents
-    a network state (e.g., aggregated features over a time window or flow)
-    and includes a ground truth label (0 for Normal, 1 for Anomaly/Attack).
+    Custom Gymnasium Environment for WiFi Intrusion Detection RL Agent.
+    Assumes input data is a DataFrame with SCALED features and a 'label' column.
+    Label convention: 0 for Normal, 1 for Known Attack.
     """
-    metadata = {'render_modes': [], 'render_fps': 4} # No rendering needed
+    metadata = {'render_modes': [], 'render_fps': 4}
 
-    def __init__(self, data_path, reward_config=None, max_steps=None):
+    def __init__(self, data_df: pd.DataFrame, reward_config: dict = None, max_steps: int = None):
         """
-        Initializes the environment.
+        Initializes the environment using a pre-loaded DataFrame.
 
         Args:
-            data_path (str): Path to the preprocessed CSV data file.
-                             Must contain numeric features and a 'label' column.
-            reward_config (dict, optional): Dictionary defining rewards.
-                                            Defaults provided if None.
-                                            Example: {'tp': 10, 'tn': 1, 'fp': -2, 'fn': -20}
-            max_steps (int, optional): Maximum number of steps per episode.
-                                       If None, episode runs through the entire dataset.
+            data_df (pd.DataFrame): DataFrame containing scaled features and 'label'.
+            reward_config (dict, optional): Defines rewards {'tp', 'tn', 'fp', 'fn'}.
+            max_steps (int, optional): Max steps per episode. Defaults to dataset length.
         """
         super().__init__()
-        logging.info(f"Initializing WidsEnv with data from: {data_path}")
+        log.info(f"Initializing WidsEnv with DataFrame shape: {data_df.shape}")
 
-        # --- Load and Preprocess Data ---
-        try:
-            self.data = pd.read_csv(data_path)
-            logging.info(f"Loaded data with shape: {self.data.shape}")
-        except FileNotFoundError:
-            logging.error(f"Data file not found: {data_path}")
-            raise
-        except Exception as e:
-            logging.error(f"Error loading data from {data_path}: {e}")
-            raise
+        self.data = data_df.reset_index(drop=True) # Ensure clean index
 
-        # Separate features (X) and labels (y)
+        # --- Validate Input Data ---
+        if self.data.empty:
+            raise ValueError("Input DataFrame 'data_df' cannot be empty.")
         if 'label' not in self.data.columns:
-            raise ValueError("Data must contain a 'label' column.")
+            raise ValueError("Input DataFrame must contain a 'label' column (0=Normal, 1=Known Attack).")
+        # Identify feature columns (assume all others are features)
+        self.feature_columns = [col for col in self.data.columns if col != 'label']
+        if not self.feature_columns:
+            raise ValueError("Input DataFrame must contain feature columns besides 'label'.")
+        log.info(f"Using {len(self.feature_columns)} feature columns.")
+
+        # Check for NaNs in features
+        if self.data[self.feature_columns].isnull().values.any():
+             log.warning("NaN values detected in input features. Ensure data is cleaned/imputed before passing to env.")
+             # Option: Fill here, but better to handle upstream before scaling
+             # self.data[self.feature_columns] = self.data[self.feature_columns].fillna(0)
+
         self.labels = self.data['label'].values
-        # Assume all other columns are features for now
-        # In a real scenario, explicitly select feature columns
-        self.features = self.data.drop('label', axis=1)
-
-        # --- Data Preprocessing (Example: Scaling) ---
-        # IMPORTANT: In a real project, use scalers fitted on the *training* data only
-        # and apply the *same* scaler to validation/test/live data.
-        # For simplicity here, we scale the entire loaded dataset.
-        # Also handle potential non-numeric columns if not already done
-        numeric_feature_cols = self.features.select_dtypes(include=np.number).columns
-        if len(numeric_feature_cols) != len(self.features.columns):
-            logging.warning("Non-numeric columns found in features. Attempting to handle...")
-            # Example: Label encode object columns (could be improved)
-            for col in self.features.select_dtypes(include='object').columns:
-                 # Check if the column looks like MAC/IP addresses - skip encoding these for now
-                 # A better approach would be specific embedding or feature hashing
-                 if not any(addr_part in col for addr_part in ['addr', 'ip']):
-                     logging.info(f"Label Encoding column: {col}")
-                     le = LabelEncoder()
-                     self.features[col] = le.fit_transform(self.features[col].astype(str)) # Convert to string first
-                 else:
-                     logging.warning(f"Skipping encoding for potential address column: {col}. Consider specific handling.")
-                     # Drop address columns if they can't be used directly
-                     self.features = self.features.drop(col, axis=1)
-
-            # Re-select numeric columns after potential encoding/dropping
-            numeric_feature_cols = self.features.select_dtypes(include=np.number).columns
-
-
-        # Handle potential NaN values (Example: fill with median)
-        if self.features[numeric_feature_cols].isnull().values.any():
-            logging.warning("NaN values found in features. Filling with median.")
-            self.features[numeric_feature_cols] = self.features[numeric_feature_cols].fillna(
-                self.features[numeric_feature_cols].median()
-            )
-
-        # Apply Min-Max Scaling to numeric features
-        self.scaler = MinMaxScaler()
-        self.scaled_features = self.scaler.fit_transform(self.features[numeric_feature_cols])
-        logging.info(f"Applied Min-Max scaling to {len(numeric_feature_cols)} numeric features.")
+        # Extract features as NumPy array, ensure float32
+        self.scaled_features = self.data[self.feature_columns].values.astype(np.float32)
 
         # --- Define Action and Observation Space ---
         self.num_features = self.scaled_features.shape[1]
-        # Action: 0 = Classify as Normal, 1 = Classify as Anomaly
+        # Action: 0 = Classify as Normal, 1 = Classify as Known Attack
         self.action_space = spaces.Discrete(2)
         # Observation: Scaled feature vector
-        # Define low/high bounds based on scaler (MinMaxScaler outputs [0, 1])
-        low_bounds = np.zeros(self.num_features, dtype=np.float32)
-        high_bounds = np.ones(self.num_features, dtype=np.float32)
+        # Determine bounds from data (assuming scaled, e.g., [0, 1] or standardized)
+        # Using [0, 1] as a common default for MinMax scaled data
+        # If using StandardScaler, bounds might be wider (e.g., -5 to 5) or use -inf, +inf
+        low_bounds = np.zeros(self.num_features, dtype=np.float32) # Adjust if not MinMax [0,1]
+        high_bounds = np.ones(self.num_features, dtype=np.float32) # Adjust if not MinMax [0,1]
         self.observation_space = spaces.Box(low=low_bounds, high=high_bounds, dtype=np.float32)
 
         # --- Reward Configuration ---
-        default_rewards = {'tp': 10, 'tn': 1, 'fp': -2, 'fn': -20}
+        default_rewards = {'tp': 10, 'tn': 1, 'fp': -2, 'fn': -20} # TP=Attack, TN=Normal
         self.reward_config = reward_config if reward_config is not None else default_rewards
-        logging.info(f"Using reward configuration: {self.reward_config}")
+        log.info(f"Using reward config: {self.reward_config}")
 
         # --- Episode State ---
         self.max_steps = max_steps if max_steps is not None else len(self.data)
         self.current_step = 0
         self.total_reward = 0
 
-        logging.info("WidsEnv initialized successfully.")
+        log.info("WidsEnv initialized successfully.")
 
     def _get_obs(self):
         """Returns the observation for the current step."""
-        return self.scaled_features[self.current_step].astype(np.float32)
+        # Handle potential index out of bounds if called after termination
+        idx = min(self.current_step, len(self.scaled_features) - 1)
+        return self.scaled_features[idx]
 
     def _get_info(self):
-        """Returns auxiliary information (optional)."""
-        # Could include things like the true label for debugging/analysis
-        return {"true_label": self.labels[self.current_step]}
+        """Returns auxiliary information."""
+        idx = min(self.current_step, len(self.labels) - 1)
+        return {"true_label": self.labels[idx]}
 
     def reset(self, seed=None, options=None):
         """Resets the environment to the beginning of the data."""
-        super().reset(seed=seed) # Important for reproducibility
-
+        super().reset(seed=seed)
         self.current_step = 0
         self.total_reward = 0
-        logging.debug("Environment reset.")
-
+        log.debug("Environment reset.")
         observation = self._get_obs()
         info = self._get_info()
-
         return observation, info
 
     def step(self, action):
-        """
-        Executes one step in the environment based on the agent's action.
+        """Executes one step based on the agent's action."""
+        if self.current_step >= len(self.data):
+             # Should not happen if terminated is handled correctly, but as safeguard
+             log.warning("Step called after end of data. Returning zero reward/obs.")
+             return np.zeros(self.num_features, dtype=np.float32), 0, True, False, {}
 
-        Args:
-            action (int): The action chosen by the agent (0 or 1).
-
-        Returns:
-            tuple: (observation, reward, terminated, truncated, info)
-        """
         terminated = False
-        truncated = False
+        truncated = False # Usually False unless using fixed episode length
 
         # --- Calculate Reward ---
         true_label = self.labels[self.current_step]
+        predicted_label = int(action) # Agent's action (0 or 1)
         reward = 0
 
-        if action == 1 and true_label == 1: # True Positive (Anomaly correctly identified)
+        if predicted_label == 1 and true_label == 1: # True Positive (Attack detected)
             reward = self.reward_config.get('tp', 10)
-        elif action == 0 and true_label == 0: # True Negative (Normal correctly identified)
+        elif predicted_label == 0 and true_label == 0: # True Negative (Normal identified)
             reward = self.reward_config.get('tn', 1)
-        elif action == 1 and true_label == 0: # False Positive (Normal classified as Anomaly)
+        elif predicted_label == 1 and true_label == 0: # False Positive (Normal classified as Attack)
             reward = self.reward_config.get('fp', -2)
-        elif action == 0 and true_label == 1: # False Negative (Anomaly classified as Normal)
+        elif predicted_label == 0 and true_label == 1: # False Negative (Attack classified as Normal)
             reward = self.reward_config.get('fn', -20)
 
         self.total_reward += reward
@@ -167,90 +130,67 @@ class WidsEnv(gym.Env):
         # --- Move to next state ---
         self.current_step += 1
 
-        # --- Check for termination/truncation ---
+        # --- Check for termination ---
         if self.current_step >= len(self.data):
-            terminated = True # End of dataset reached
-            logging.debug(f"Episode terminated (end of data) at step {self.current_step}. Total reward: {self.total_reward}")
-        elif self.current_step >= self.max_steps:
-             truncated = True # Max steps reached
-             logging.debug(f"Episode truncated (max steps) at step {self.current_step}. Total reward: {self.total_reward}")
-
+            terminated = True
+            log.debug(f"Episode terminated (end of data) at step {self.current_step}. Total reward: {self.total_reward}")
+        # Check for truncation (optional, if max_steps is set)
+        if self.max_steps is not None and self.current_step >= self.max_steps:
+             truncated = True
+             terminated = True # Often terminate when truncated in this setup
+             log.debug(f"Episode truncated (max steps) at step {self.current_step}. Total reward: {self.total_reward}")
 
         # Get next observation and info
-        # Handle edge case where terminated/truncated on the last step
-        if terminated or truncated:
-             # Return the last valid observation or a zero vector if preferred
-             observation = self._get_obs() if self.current_step < len(self.data) else np.zeros(self.num_features, dtype=np.float32)
-             info = self._get_info() if self.current_step < len(self.data) else {}
-        else:
-            observation = self._get_obs()
-            info = self._get_info()
-
-        # Log step details (optional, can be verbose)
-        # logging.debug(
-        #     f"Step: {self.current_step}, Action: {action}, True Label: {true_label}, "
-        #     f"Reward: {reward}, Terminated: {terminated}, Truncated: {truncated}"
-        # )
+        observation = self._get_obs() if not terminated else np.zeros(self.num_features, dtype=np.float32)
+        info = self._get_info() if not terminated else {}
 
         return observation, reward, terminated, truncated, info
 
     def close(self):
-        """Clean up any resources (if needed)."""
-        logging.info("Closing WidsEnv.")
-        # No specific resources to close in this basic version
+        """Clean up resources."""
+        log.info("Closing WidsEnv.")
         pass
 
-# --- Example Usage (for testing the environment) ---
+# --- Example Usage (for testing the environment directly) ---
 if __name__ == '__main__':
-    # Create a dummy CSV file for testing
-    dummy_data = {
-        'feature1': np.random.rand(100),
-        'feature2': np.random.rand(100) * 10,
-        'feature3': np.random.randint(0, 5, 100),
-        'some_address': ['192.168.1.'+str(i) for i in range(100)], # Example non-numeric
-        'label': np.random.randint(0, 2, 100) # Random labels 0 or 1
-    }
-    dummy_df = pd.DataFrame(dummy_data)
-    dummy_path = "data/processed/dummy_wids_data.csv"
-    os.makedirs(os.path.dirname(dummy_path), exist_ok=True)
-    dummy_df.to_csv(dummy_path, index=False)
-    logging.info(f"Created dummy data file at: {dummy_path}")
+    log.info("--- Testing WidsEnv ---")
+    # Create dummy SCALED data
+    num_samples = 200
+    num_features = 10
+    dummy_scaled_features = np.random.rand(num_samples, num_features).astype(np.float32) # Assume scaled [0,1]
+    dummy_labels = np.random.randint(0, 2, num_samples) # 0=Normal, 1=Attack
+    dummy_df = pd.DataFrame(dummy_scaled_features, columns=[f'f{i}' for i in range(num_features)])
+    dummy_df['label'] = dummy_labels
+    log.info(f"Created dummy scaled DataFrame with shape: {dummy_df.shape}")
 
-    # Instantiate the environment
     try:
-        env = WidsEnv(data_path=dummy_path, max_steps=50)
+        # Instantiate the environment with the DataFrame
+        env = WidsEnv(data_df=dummy_df, max_steps=100)
 
         # Test with environment checker
         from stable_baselines3.common.env_checker import check_env
-        logging.info("Running environment checker...")
+        log.info("Running environment checker...")
         check_env(env)
-        logging.info("Environment check passed.")
+        log.info("Environment check passed.")
 
         # Test reset and step
-        logging.info("Testing reset()...")
+        log.info("Testing reset()...")
         obs, info = env.reset()
-        logging.info(f"Initial observation shape: {obs.shape}, dtype: {obs.dtype}")
-        logging.info(f"Initial info: {info}")
+        log.info(f"Initial observation shape: {obs.shape}, dtype: {obs.dtype}")
+        log.info(f"Initial info: {info}")
 
-        logging.info("Testing step()...")
-        for i in range(5):
-            action = env.action_space.sample() # Take random action
+        log.info("Testing step()...")
+        total_ep_reward = 0
+        for i in range(105): # Exceed max_steps to test truncation
+            action = env.action_space.sample() # Random action
             obs, reward, terminated, truncated, info = env.step(action)
-            logging.info(
-                f"Step {i+1}: Action={action}, Reward={reward:.2f}, Terminated={terminated}, Truncated={truncated}, "
-                f"Obs shape={obs.shape}, Info={info}"
-            )
+            total_ep_reward += reward
+            log.debug(f"Step {i+1}: Action={action}, Reward={reward:.2f}, Term={terminated}, Trunc={truncated}")
             if terminated or truncated:
-                logging.info("Episode finished.")
+                log.info(f"Episode finished at step {i+1}. Total Reward: {total_ep_reward}")
                 break
-
         env.close()
+        log.info("--- WidsEnv Test Complete ---")
 
     except Exception as e:
-        logging.error(f"Error during environment testing: {e}", exc_info=True)
-    finally:
-        # Clean up dummy file
-        if os.path.exists(dummy_path):
-            os.remove(dummy_path)
-            logging.info(f"Removed dummy data file: {dummy_path}")
-
+        log.error(f"Error during environment testing: {e}", exc_info=True)

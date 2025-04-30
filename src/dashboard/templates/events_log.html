@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}WIDS Events Log{% endblock %}
+
+{% block sidebar_controls %}
+{# Controls specific to the Events Log page #}
+<h6 class="sidebar-heading">Event Log Controls</h6>
+<ul class="nav flex-column mb-2 controls-section">
+    <li class="nav-item mb-2"> <button id="refreshButton" class="btn btn-outline-primary btn-sm w-100"><i
+                class="bi bi-arrow-clockwise"></i> Refresh Log</button> </li>
+    {# Pagination controls will be added below table #}
+    <li class="nav-item"> <label for="limitSelect" class="form-label">Events/Page:</label> <select
+            class="form-select form-select-sm" id="limitSelect">
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+            <option value="250">250</option>
+            <option value="500">500</option>
+        </select> </li>
+    {# Add other filters if needed (e.g., time range) #}
+</ul>
+{% endblock %}
+
+{% block content %}
+<section id="eventsLogSection" class="dashboard-section active">
+    <div class="page-header d-flex justify-content-between align-items-center">
+        <h1 class="h2 mb-0">Events Log</h1>
+        <span id="eventCount" class="text-muted">Total: 0 | Page: 1 | Showing: 0</span>
+    </div>
+    <p class="text-muted mt-2">Detailed log of captured network events/packets.</p>
+
+    <div class="table-container mt-3">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm align-middle">
+                <thead class="sticky-top">
+                    <tr>
+                        <th scope="col">Timestamp</th>
+                        <th scope="col">UID</th>
+                        <th scope="col">Prediction</th> {# Prediction made by RL model #}
+                        <th scope="col">Label</th> {# Human label if provided #}
+                        <th scope="col">Details</th> {# Link/Button to view full packet info #}
+                    </tr>
+                </thead>
+                <tbody id="eventsLogTableBody">
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">Loading event log...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <nav aria-label="Event log navigation" class="mt-3 d-flex justify-content-center">
+        <ul class="pagination pagination-sm" id="paginationControls">
+        </ul>
+    </nav>
+
+</section>
+
+<div class="modal fade" id="packetInfoModal" tabindex="-1" aria-labelledby="packetInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable"> {# Larger modal #}
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="packetInfoModalLabel">Event/Packet Details: <span id="packetInfoUid"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><small class="text-muted">Timestamp:</small><br><span
+                                id="packetInfoTimestamp"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><small class="text-muted">Prediction:</small><br><span
+                                id="packetInfoPrediction"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><small class="text-muted">Human Label:</small><br><span
+                                id="packetInfoLabel"></span></p>
+                    </div>
+                </div>
+                <h6>Raw Features Data</h6>
+                <pre><code id="packetInfoFeatures"></code></pre>
+                {# Potentially add more parsed packet details here if available from backend #}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    // --- DOM Elements (Specific to Events Log) ---
+    const tableBody = document.getElementById('eventsLogTableBody');
+    const limitSelect = document.getElementById('limitSelect'); // In sidebar
+    const eventCountSpan = document.getElementById('eventCount');
+    const paginationControls = document.getElementById('paginationControls');
+    const packetInfoModalEl = document.getElementById('packetInfoModal');
+    const packetInfoModal = packetInfoModalEl ? new bootstrap.Modal(packetInfoModalEl) : null;
+    // Modal fields
+    const packetInfoUid = document.getElementById('packetInfoUid');
+    const packetInfoTimestamp = document.getElementById('packetInfoTimestamp');
+    const packetInfoPrediction = document.getElementById('packetInfoPrediction');
+    const packetInfoLabel = document.getElementById('packetInfoLabel');
+    const packetInfoFeatures = document.getElementById('packetInfoFeatures');
+
+    // --- State ---
+    let currentPage = 1;
+    let totalEvents = 0;
+    let eventsPerPage = 100; // Default, will sync with select
+    let currentEventLogData = []; // Holds data for the current page
+    let isFetchingLog = false;
+
+    // --- API Endpoint ---
+    const EVENTS_ENDPOINT = `${WIDS_API_BASE_URL}/events/`; // Assumes this endpoint supports pagination
+
+    // --- Rendering ---
+    function renderLogTable(events) {
+        if (!tableBody) return;
+        tableBody.innerHTML = '';
+        if (!events || events.length === 0) { tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-5">No events found for this page.</td></tr>'; return; }
+        events.forEach(event => {
+            const row = tableBody.insertRow();
+            const predictionBadge = event.prediction === 1 ? `<span class="badge bg-danger-subtle text-danger-emphasis prediction-badge">Attack</span>` : `<span class="badge bg-success-subtle text-success-emphasis prediction-badge">Normal</span>`;
+            const labelBadge = event.human_label ? `<span class="badge bg-info-subtle text-info-emphasis label-badge">${event.human_label}</span>` : `<span class="badge bg-secondary-subtle text-secondary-emphasis label-badge">N/A</span>`;
+            row.innerHTML = `
+                    <td><small>${formatTimestamp(event.timestamp)}</small></td>
+                    <td><small class="font-monospace" title="${event.event_uid}">${event.event_uid ? event.event_uid.substring(0, 12) + '...' : 'N/A'}</small></td>
+                    <td>${predictionBadge}</td>
+                    <td>${labelBadge}</td>
+                    <td><button class="btn btn-sm btn-outline-secondary" onclick="showPacketInfo('${event.event_uid}')"><i class="bi bi-eye me-1"></i>View</button></td>
+                `;
+        });
+    }
+
+    function renderPagination() {
+        if (!paginationControls || totalEvents <= eventsPerPage) {
+            if (paginationControls) paginationControls.innerHTML = ''; // Clear if not needed
+            return;
+        }
+        const totalPages = Math.ceil(totalEvents / eventsPerPage);
+        let paginationHTML = '';
+
+        // Previous button
+        paginationHTML += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                                 <a class="page-link" href="#" aria-label="Previous" onclick="changePage(${currentPage - 1})"><span aria-hidden="true">&laquo;</span></a>
+                               </li>`;
+
+        // Page numbers (simplified view)
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, currentPage + 2);
+        if (currentPage <= 3) endPage = Math.min(totalPages, 5);
+        if (currentPage >= totalPages - 2) startPage = Math.max(1, totalPages - 4);
+
+        if (startPage > 1) paginationHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHTML += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+                                    <a class="page-link" href="#" onclick="changePage(${i})">${i}</a>
+                                  </li>`;
+        }
+
+        if (endPage < totalPages) paginationHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+
+        // Next button
+        paginationHTML += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                                 <a class="page-link" href="#" aria-label="Next" onclick="changePage(${currentPage + 1})"><span aria-hidden="true">&raquo;</span></a>
+                               </li>`;
+
+        paginationControls.innerHTML = paginationHTML;
+    }
+
+    // --- Data Fetching ---
+    async function fetchEventLogPage(page = 1) {
+        if (isFetchingLog || !limitSelect) return;
+        isFetchingLog = true;
+        showLoading(true);
+        currentPage = page;
+        eventsPerPage = parseInt(limitSelect.value, 10) || 100;
+        const skip = (currentPage - 1) * eventsPerPage;
+
+        // IMPORTANT: Assumes backend /events endpoint returns ALL events (not just anomalies)
+        // and supports 'skip' and 'limit' parameters.
+        const params = new URLSearchParams({ skip: skip, limit: eventsPerPage });
+        try {
+            // Use common fetchApi
+            const data = await fetchApi(`${EVENTS_ENDPOINT}?${params.toString()}`, {}, 'isFetchingLog');
+            currentEventLogData = data.events || [];
+            totalEvents = data.total_count || 0;
+            renderLogTable(currentEventLogData);
+            renderPagination(); // Update pagination controls
+            if (eventCountSpan) eventCountSpan.textContent = `Total: ${totalEvents} | Page: ${currentPage} | Showing: ${currentEventLogData.length}`;
+        } catch (error) { renderLogTable([]); renderPagination(); if (eventCountSpan) eventCountSpan.textContent = 'Total: - | Page: - | Showing: -'; }
+        finally { showLoading(false); isFetchingLog = false; }
+    }
+
+    // --- Modal ---
+    function showPacketInfo(eventUid) {
+        if (!packetInfoModal || !packetInfoUid) return;
+        // Find event data (might need separate fetch if not on current page)
+        // For simplicity, assume it's in currentEventLogData for now
+        const event = currentEventLogData.find(e => e.event_uid === eventUid);
+        if (!event) { showError(`Details not found for event UID: ${eventUid} on current page.`); return; }
+
+        packetInfoUid.textContent = event.event_uid;
+        packetInfoTimestamp.textContent = formatTimestamp(event.timestamp);
+        packetInfoPrediction.textContent = event.prediction === 1 ? 'Attack' : 'Normal';
+        packetInfoLabel.textContent = event.human_label || 'N/A';
+        try { packetInfoFeatures.textContent = JSON.stringify(event.features_data, null, 2); } catch (e) { packetInfoFeatures.textContent = "Error displaying features."; }
+        // packetInfoParsed.textContent = "Parsed packet details would go here if available from API...";
+
+        packetInfoModal.show();
+    }
+
+    // --- Pagination ---
+    function changePage(newPage) {
+        const totalPages = Math.ceil(totalEvents / eventsPerPage);
+        if (newPage >= 1 && newPage <= totalPages && newPage !== currentPage) {
+            fetchEventLogPage(newPage);
+        }
+    }
+
+    // --- Refresh Function ---
+    function refreshPageData() { console.log("Refreshing events log page data..."); fetchEventLogPage(currentPage); }
+
+    // --- Event Listeners ---
+    limitSelect?.addEventListener('change', () => fetchEventLogPage(1)); // Go to page 1 on limit change
+    // Global refresh listener is in base.html
+
+    // --- Initial Load ---
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!packetInfoModal) console.error("Packet info modal instance error.");
+        eventsPerPage = parseInt(limitSelect?.value ?? "100", 10); // Sync initial limit
+        refreshPageData(); // Fetch initial page
+    });
+</script>
+{% endblock %}
