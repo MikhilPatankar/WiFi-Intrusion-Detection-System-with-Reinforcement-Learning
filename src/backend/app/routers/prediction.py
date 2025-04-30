@@ -1,31 +1,55 @@
 
 # --- File: src/backend/app/routers/prediction.py ---
-# No changes needed here
 
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 import logging
-from ..models import NetworkStateFeatures, PredictionResult, EventLogCreate
+from typing import Any, Dict
+
+# Updated models needed
+from ..models import NetworkStateFeatures, EventLogCreate, HybridPredictionResult # Use new response/create models
+
 from ..services import prediction_service, log_service
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..db import get_async_session
 import datetime
 import numpy as np
 
+log = logging.getLogger(__name__)
 router = APIRouter(prefix="/predict", tags=["Prediction"])
 
-@router.post("/", response_model=PredictionResult)
-async def predict_network_state(features: NetworkStateFeatures, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_async_session)):
-    logging.info("Received prediction request.")
+# Updated Background Task Function (uses EventLogCreate which now has hybrid fields)
+async def background_log_event(db: AsyncSession, event_data_dict: Dict[str, Any]):
+    """Background task to log event details using the log_service."""
     try:
-        prediction = await prediction_service.predict_anomaly(features)
-        logging.info(f"Prediction result: {prediction}")
-        log_features = features.feature_vector
-        if isinstance(log_features, np.ndarray): log_features = log_features.tolist()
-        event_data_to_log = EventLogCreate(timestamp=datetime.datetime.now(), features_data=log_features, prediction=prediction, initial_reward=None)
-        background_tasks.add_task(log_service.create_event_log, db, event_data_to_log)
-        return PredictionResult(prediction=prediction, status="prediction_queued_for_logging")
-    except RuntimeError as e: logging.error(f"Prediction service error: {e}", exc_info=True); raise HTTPException(status_code=503, detail=f"Prediction service unavailable: {e}")
-    except ValueError as e: logging.error(f"Prediction input error: {e}", exc_info=True); raise HTTPException(status_code=422, detail=f"Invalid input features: {e}")
-    except Exception as e: logging.error(f"Unexpected error during prediction: {e}", exc_info=True); raise HTTPException(status_code=500, detail=f"Internal server error during prediction: {e}")
+        # Create Pydantic model from dict for validation before passing to service
+        event_log_create = EventLogCreate(**event_data_dict)
+        await log_service.create_event_log(db, event_log_create)
+    except Exception as e:
+        log.error(f"Background logging/publishing failed: {e}", exc_info=True)
 
+# Updated Predict Endpoint
+@router.post("/", response_model=HybridPredictionResult)
+async def predict_network_state_hybrid(
+    features: NetworkStateFeatures,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_async_session)
+):
+    """Receives features, performs hybrid prediction, logs, returns combined status."""
+    log.info("Hybrid prediction request received.")
+    try:
+        prediction_results = await prediction_service.run_hybrid_prediction(features)
+        event_data_to_log = {
+            "timestamp": datetime.datetime.now(datetime.timezone.utc),
+            "features_data": features.feature_vector, # Original unscaled features
+            "prediction": prediction_results["rl_prediction"],
+            "ae_anomaly_flag": prediction_results["ae_anomaly_flag"],
+            "reconstruction_error": prediction_results["reconstruction_error"],
+            "final_status": prediction_results["final_status"],
+            "initial_reward": None
+        }
+        background_tasks.add_task(background_log_event, db, event_data_to_log)
+        return HybridPredictionResult(**prediction_results) # Pass dict directly
 
+    except RuntimeError as e: log.error(f"Service error: {e}"); raise HTTPException(status_code=503, detail=f"{e}")
+    except ValueError as e: log.error(f"Input error: {e}"); raise HTTPException(status_code=422, detail=f"{e}")
+    except Exception as e: log.error(f"Prediction error: {e}", exc_info=True); raise HTTPException(status_code=500, detail="Prediction failed.")

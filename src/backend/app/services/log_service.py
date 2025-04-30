@@ -1,46 +1,33 @@
 
-# --- File: src/backend/app/services/log_service.py ---
-# No changes needed
+import logging; from sqlalchemy.future import select; from sqlalchemy.ext.asyncio import AsyncSession
+from ..schemas import EventLog, AttackTypes
+from ..models import EventLogCreate, EventLabel, EventStats, TimeSeriesPoint, TimeSeriesData, EventLogRead, AttackTypeRead
+from sqlalchemy import desc, func, case, text; from typing import List, Dict, Any
+import numpy as np; import datetime; from datetime import timedelta
+from ..broadcast import broadcast; import json
 
-
-import logging
-from sqlalchemy.future import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from ..schemas import EventLog
-from ..models import EventLogCreate, EventLabel, EventStats, TimeSeriesPoint, TimeSeriesData, EventLogRead # Added EventLogRead
-from sqlalchemy import desc, func, case, text
-from typing import List, Dict
-import numpy as np
-import datetime
-from datetime import timedelta
-from ..broadcast import broadcast # Import the shared broadcaster instance
-import json # Import json for serialization
-
-
-# Channel name for broadcasting events
+log = logging.getLogger(__name__)
 EVENT_CHANNEL = "wids-events"
 
 async def create_event_log(db: AsyncSession, event_data: EventLogCreate) -> EventLog:
-    """Creates log entry and publishes it to the broadcast channel."""
+    """Creates log entry with hybrid fields and publishes it."""
     try:
-        db_event = EventLog(**event_data.dict())
+        # Create DB model instance from the Pydantic model's dict
+        db_event = EventLog(**event_data.dict(exclude_unset=True))
         db.add(db_event); await db.commit(); await db.refresh(db_event)
-        logging.info(f"Created event log: {db_event.event_uid}")
+        log.info(f"Created event log: {db_event.event_uid} with status: {db_event.final_status}")
 
-        # --- Publish the new event ---
+        # Publish the new event (with hybrid fields)
         try:
-            # Convert the ORM model to a Pydantic model for serialization
-            event_to_publish = EventLogRead.from_orm(db_event)
-            # Publish as a JSON string
+            # Convert ORM model back to the Pydantic Read model for consistent SSE format
+            event_to_publish = EventLogRead.from_orm(db_event) # EventLogRead now includes hybrid fields
             await broadcast.publish(channel=EVENT_CHANNEL, message=event_to_publish.json())
-            logging.info(f"Published event {db_event.event_uid} to channel '{EVENT_CHANNEL}'")
+            log.info(f"Published event {db_event.event_uid} to channel '{EVENT_CHANNEL}'")
         except Exception as pub_err:
-            # Log publishing error but don't fail the whole operation
-            logging.error(f"Failed to publish event {db_event.event_uid}: {pub_err}", exc_info=True)
-        # --- End Publish ---
+            log.error(f"Failed to publish event {db_event.event_uid}: {pub_err}", exc_info=True)
 
         return db_event
-    except Exception as e: await db.rollback(); logging.error(f"Error creating event log: {e}"); raise
+    except Exception as e: await db.rollback(); log.error(f"Error creating event log: {e}", exc_info=True); raise
 
 async def get_event_log_by_uid(db: AsyncSession, event_uid: str) -> EventLog | None:
     try: result = await db.execute(select(EventLog).where(EventLog.event_uid == event_uid)); return result.scalars().first()
@@ -184,3 +171,41 @@ async def get_event_timeseries(db: AsyncSession, interval: str = "hour", hours_a
     except Exception as e:
         logging.error(f"Error fetching time series data: {e}", exc_info=True)
         return TimeSeriesData(interval=interval, data_points=[]) # Return empty on error
+
+
+async def get_attack_types(db: AsyncSession, include_inactive: bool = False) -> List[AttackTypes]:
+    """
+    Fetches defined attack types from the database.
+
+    Args:
+        db (AsyncSession): The database session dependency.
+        include_inactive (bool): Whether to include types marked as inactive.
+
+    Returns:
+        List[AttackTypes]: A list of AttackTypes ORM objects.
+                           Returns an empty list if an error occurs.
+    """
+    log.debug(f"Fetching attack types from DB (include_inactive={include_inactive})...")
+    try:
+        # Start building the select statement
+        stmt = select(AttackTypes)
+
+        # Conditionally filter based on the is_active flag
+        if not include_inactive:
+            stmt = stmt.where(AttackTypes.is_active == True)
+
+        # Order consistently (e.g., by ID or name)
+        stmt = stmt.order_by(AttackTypes.type_id)
+
+        # Execute the query
+        result = await db.execute(stmt)
+        types = result.scalars().all() # Get all results as ORM objects
+
+        log.info(f"Fetched {len(types)} attack types from database.")
+        return list(types) # Return as a standard list
+
+    except Exception as e:
+        # Log the error with traceback for debugging
+        log.error(f"Database error fetching attack types: {e}", exc_info=True)
+        # Return an empty list in case of error to prevent downstream issues
+        return []
