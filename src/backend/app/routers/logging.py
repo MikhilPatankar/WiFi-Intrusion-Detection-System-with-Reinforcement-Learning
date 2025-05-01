@@ -12,15 +12,8 @@ from ..broadcast import broadcast
 from ..services.log_service import EVENT_CHANNEL
 
 log = logging.getLogger(__name__)
-router_attack_types = APIRouter(prefix="/attack_types", tags=["Attack Types"])
-router = APIRouter(prefix="/events", tags=["Events & Labeling"])
 
-@router_attack_types.get("/", response_model=List[AttackTypeRead])
-async def read_attack_types(include_inactive: bool = Query(False), db: AsyncSession = Depends(get_async_session)):
-    """Retrieve a list of all defined attack classifications."""
-    log.info(f"Request for attack types (inactive={include_inactive}).")
-    try: types = await log_service.get_attack_types(db, include_inactive=include_inactive); return types
-    except Exception as e: log.error(f"Failed get attack types: {e}"); raise HTTPException(status_code=500, detail="Failed.")
+router = APIRouter(prefix="/events", tags=["Events & Labeling"])
 
 @router.get("/stream")
 async def event_stream(request: Request):

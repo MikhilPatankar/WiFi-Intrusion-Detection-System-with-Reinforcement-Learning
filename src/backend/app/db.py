@@ -3,7 +3,8 @@
 
 import logging
 from typing import AsyncGenerator
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
 from .core.config import settings
 from sqlmodel import SQLModel # Required for table creation
 
