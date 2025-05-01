@@ -2,7 +2,8 @@
 import logging; from sqlalchemy.future import select; from sqlalchemy.ext.asyncio import AsyncSession
 from ..schemas import EventLog, AttackTypes
 from ..models import EventLogCreate, EventLabel, EventStats, TimeSeriesPoint, TimeSeriesData, EventLogRead, AttackTypeRead
-from sqlalchemy import desc, func, case, text; from typing import List, Dict, Any
+from sqlalchemy import desc, func, case, text, and_
+from typing import List, Dict, Any
 import numpy as np; import datetime; from datetime import timedelta
 from ..broadcast import broadcast; import json
 
@@ -75,8 +76,8 @@ async def get_event_statistics(db: AsyncSession) -> EventStats:
             func.sum(case((EventLog.human_label != None, 1), else_=0)).label("labeled_count"),
             func.sum(case((EventLog.human_label == None, 1), else_=0)).label("unlabeled_count"),
             # --- NEW Time-based Counts ---
-            func.sum(case((EventLog.prediction == 1, EventLog.timestamp >= one_hour_ago, 1), else_=0)).label("anomalies_last_hour"),
-            func.sum(case((EventLog.prediction == 1, EventLog.timestamp >= twenty_four_hours_ago, 1), else_=0)).label("anomalies_last_24h")
+            func.sum(case((and_(EventLog.prediction == 1, EventLog.timestamp >= one_hour_ago), 1), else_=0)).label("anomalies_last_hour"),
+            func.sum(case((and_(EventLog.prediction == 1, EventLog.timestamp >= twenty_four_hours_ago), 1),else_=0)).label("anomalies_last_24h")
             # --- End NEW ---
         )
         result = await db.execute(stmt)
