@@ -1,4 +1,4 @@
-
+import uvicorn
 import logging
 import numpy as np
 from stable_baselines3 import DQN # Or PPO, etc.
@@ -17,9 +17,12 @@ logging.basicConfig(level=logging.INFO,  # Set desired logging level
 scaler_path = "../models/wids_scaler.joblib"
 ae_model_path = "../models/anomaly_autoencoder.h5"
 ae_threshold_path = "../models/ae_threshold.joblib"
+models_loaded = True
 
 app = FastAPI()
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 
+PORT = os.getenv("PORT", 8050)
 
 try: feature_scaler = joblib.load(scaler_path); assert hasattr(feature_scaler, 'transform'); logging.info(f"Loaded scaler: {scaler_path}")
 except Exception as e: logging.error(f"Error loading scaler: {e}"); feature_scaler = None; models_loaded = False
@@ -27,7 +30,12 @@ except Exception as e: logging.error(f"Error loading scaler: {e}"); feature_scal
 if not os.path.exists(ae_model_path): logging.error(f"AE Model not found: {ae_model_path}"); ae_model = None; models_loaded = False
 else:
     try:
-        ae_model = keras.models.load_model(ae_model_path)
+        custom_objects = {
+            'mse': tf.keras.losses.MeanSquaredError()
+            # Or potentially: 'mse': tf.keras.metrics.MeanSquaredError()
+            # Or even the functional version: 'mse': tf.keras.losses.mean_squared_error
+        }
+        ae_model = keras.models.load_model(ae_model_path, custom_objects=custom_objects)
         # Optional: Warm-up prediction
         if feature_scaler and hasattr(feature_scaler, 'n_features_in_'):
                 dummy_input = np.zeros((1, feature_scaler.n_features_in_), dtype=np.float32)
@@ -46,7 +54,7 @@ if not models_loaded: logging.warning("One or more models/scalers failed to load
 async def prediction(parameters):
     features = []
     for f in parameters:
-        features.append(f)
+        features.append(parameters[f])
     
     if feature_scaler is None: raise RuntimeError("Feature scaler unavailable.")
     if ae_model is None: raise RuntimeError("AE model unavailable.")
@@ -97,5 +105,5 @@ async def handle_event(request: Request):
         )
 
 if __name__ == '__main__':
-    import uvicorn
-    uvicorn.run("test_endpoint:app", host='0.0.0.0', port=5000, reload=True)
+    app.run(host='0.0.0.0', port=int(PORT), debug=True)
+    #uvicorn.run("ae_prediction_test:app", host='0.0.0.0', port=int(PORT), reload=True)

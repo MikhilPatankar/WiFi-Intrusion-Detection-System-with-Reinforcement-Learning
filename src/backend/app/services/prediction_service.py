@@ -47,8 +47,8 @@ def load_dependencies():
     if not os.path.exists(ae_model_path): log.error(f"AE Model not found: {ae_model_path}"); ae_model = None; models_loaded = False
     else:
         try:
-            ae_model = keras.models.load_model(ae_model_path)
-            # Optional: Warm-up prediction
+            custom_objects = {'mse': tf.keras.losses.MeanSquaredError()}
+            ae_model = keras.models.load_model(ae_model_path, custom_objects=custom_objects)
             if feature_scaler and hasattr(feature_scaler, 'n_features_in_'):
                  dummy_input = np.zeros((1, feature_scaler.n_features_in_), dtype=np.float32)
                  ae_model.predict(dummy_input, verbose=0)

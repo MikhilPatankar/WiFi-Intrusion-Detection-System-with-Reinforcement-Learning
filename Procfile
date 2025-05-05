@@ -1,1 +1,1 @@
-web: cd /usr/src/app/src/backend && uvicorn main:app --reload --port 8000
+web: bash start.sh

@@ -7,7 +7,7 @@
     "env": {
       "PORT": {
               "description": "Define PORT [int]",
-              "value": "8000"
+              "value": "8050"
       }
     }
   }

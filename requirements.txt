@@ -11,7 +11,7 @@ stable-baselines3[extra]>=2.0.0 # RL algorithms (includes Gymnasium, PyTorch, Te
 # gymnasium>=0.28.0 # RL environment standard API (dependency of SB3)
 scikit-learn>=1.1.0 # For preprocessing (scalers, encoders) and ML utilities
 joblib>=1.1.0      # For saving/loading Python objects (like scalers)
-
+tensorflow>=2.10.0    # TensorFlow (if using TensorFlow-based models)
 # --- Backend API (FastAPI) ---
 fastapi[all]>=0.100.0 # FastAPI framework with all optional dependencies (incl. Uvicorn, Pydantic v1/v2 compat)
 uvicorn>=0.22.0    # ASGI server (often included with fastapi[all])

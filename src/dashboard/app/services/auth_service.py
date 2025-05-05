@@ -1,5 +1,3 @@
-# --- File: src/dashboard/app/services/auth_service.py ---
-
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -36,15 +34,10 @@ def decode_access_token(token: str) -> Optional[str]:
         username: Optional[str] = payload.get("sub")
         if username is None:
             return None
-        # Optional: Validate payload structure with TokenData model
-        # token_data = TokenData(**payload)
         return username
     except (JWTError, ValidationError):
-        # Catches decode errors, expired tokens, validation errors
         return None
 
-# --- Dummy User Database (Dashboard Admin) ---
-# Replace with a real user source if needed
 DASHBOARD_USERS_DB = {
     "dashadmin": {
         "username": "dashadmin",
