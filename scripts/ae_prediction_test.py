@@ -14,9 +14,9 @@ from fastapi.responses import JSONResponse # Import JSONResponse for custom resp
 logging.basicConfig(level=logging.INFO,  # Set desired logging level
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
-scaler_path = "models/wids_scaler.joblib"
-ae_model_path = "models/anomaly_autoencoder.h5"
-ae_threshold_path = "models/ae_threshold.joblib"
+scaler_path = "../models/wids_scaler.joblib"
+ae_model_path = "../models/anomaly_autoencoder.h5"
+ae_threshold_path = "../models/ae_threshold.joblib"
 
 app = FastAPI()
 
