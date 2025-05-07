@@ -77,7 +77,8 @@ class EventLogRead(EventLogBase):
     """Model used when reading event log data (e.g., for SSE, GET /events)."""
     id: int # Primary key from DB
     event_uid: str # Unique identifier string
-    class Config: orm_mode = True
+    class Config: from_attributes = True
+
 
 class EventLogReadList(BaseModel):
     """Response model for listing multiple event logs."""

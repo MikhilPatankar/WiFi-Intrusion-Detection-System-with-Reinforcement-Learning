@@ -17,13 +17,13 @@ import sys
 # --- Import custom environment ---
 # Assuming structure allows importing from rl_agent
 try:
-    from wids_env import WidsEnv
+    from wids_env import WidsEnvMultiClass
 except ImportError:
      # Add path if run from project root
      project_root = Path(__file__).resolve().parent.parent.parent
      src_path = project_root / 'src'
      sys.path.insert(0, str(src_path))
-     from rl_agent.wids_env import WidsEnv
+     from rl_agent.wids_env import WidsEnvMultiClass
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -73,7 +73,7 @@ def train_rl_agent(data_path: Path, scaler_path: Path, model_save_path: Path, lo
              features_unscaled = np.nan_to_num(features_unscaled, nan=0.0) # Example: fill with 0
 
         features_scaled = scaler.transform(features_unscaled)
-        # Create DataFrame expected by WidsEnv
+        # Create DataFrame expected by WidsEnvMultiClass
         scaled_df = pd.DataFrame(features_scaled, columns=feature_cols)
         scaled_df['label'] = df['label'].values # Add labels back
         log.info("Data scaling complete.")
@@ -83,7 +83,7 @@ def train_rl_agent(data_path: Path, scaler_path: Path, model_save_path: Path, lo
     # Pass the scaled DataFrame to the environment constructor
     env_kwargs = {'data_df': scaled_df, 'reward_config': REWARD_CONFIG}
     # Use Monitor wrapper for logging episode rewards/lengths
-    env = make_vec_env(lambda: Monitor(WidsEnv(**env_kwargs)), n_envs=1)
+    env = make_vec_env(lambda: Monitor(WidsEnvMultiClass(**env_kwargs)), n_envs=1)
     log.info("Created vectorized environment.")
 
     # 5. Configure Callbacks

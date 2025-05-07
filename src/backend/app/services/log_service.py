@@ -54,7 +54,7 @@ async def update_event_label(db: AsyncSession, label_data: EventLabel) -> EventL
     try:
         db_event = await get_event_log_by_uid(db, label_data.event_uid)
         if db_event is None: logging.warning(f"Event log UID {label_data.event_uid} not found for labeling."); return None
-        db_event.human_label = label_data.human_label; db_event.label_timestamp = datetime.datetime.now()
+        db_event.human_label = label_data.human_label; db_event.labeling_timestamp = datetime.datetime.now()
         db.add(db_event); await db.commit(); await db.refresh(db_event)
         logging.info(f"Updated label for event UID {db_event.event_uid} to '{label_data.human_label}'")
         return db_event
@@ -71,13 +71,13 @@ async def get_event_statistics(db: AsyncSession) -> EventStats:
         # Use case for conditional aggregation within a single query
         stmt = select(
             func.count(EventLog.id).label("total_events"),
-            func.sum(case((EventLog.prediction == 1, 1), else_=0)).label("anomaly_count"),
+            func.sum(case((EventLog.ae_anomaly_flag == 1, 1), else_=0)).label("anomaly_count"),
             func.sum(case((EventLog.prediction == 0, 1), else_=0)).label("normal_count"),
-            func.sum(case((EventLog.human_label != None, 1), else_=0)).label("labeled_count"),
-            func.sum(case((EventLog.human_label == None, 1), else_=0)).label("unlabeled_count"),
+            func.sum(case((and_(EventLog.ae_anomaly_flag == 1, EventLog.human_label != None), 1), else_=0)).label("labeled_count"),
+            func.sum(case((and_(EventLog.ae_anomaly_flag == 1, EventLog.human_label == None), 1), else_=0)).label("unlabeled_count"),
             # --- NEW Time-based Counts ---
-            func.sum(case((and_(EventLog.prediction == 1, EventLog.timestamp >= one_hour_ago), 1), else_=0)).label("anomalies_last_hour"),
-            func.sum(case((and_(EventLog.prediction == 1, EventLog.timestamp >= twenty_four_hours_ago), 1),else_=0)).label("anomalies_last_24h")
+            func.sum(case((and_(EventLog.ae_anomaly_flag == 1, EventLog.timestamp >= one_hour_ago), 1), else_=0)).label("anomalies_last_hour"),
+            func.sum(case((and_(EventLog.ae_anomaly_flag == 1, EventLog.timestamp >= twenty_four_hours_ago), 1),else_=0)).label("anomalies_last_24h")
             # --- End NEW ---
         )
         result = await db.execute(stmt)
@@ -89,13 +89,13 @@ async def get_event_statistics(db: AsyncSession) -> EventStats:
         label_distribution = {row.human_label: row.count for row in label_result.mappings().all()}
 
         stats = EventStats(
-            total_events=counts.get("total_events", 0) if counts else 0,
-            anomaly_count=counts.get("anomaly_count", 0) if counts else 0,
-            normal_count=counts.get("normal_count", 0) if counts else 0,
-            labeled_count=counts.get("labeled_count", 0) if counts else 0,
-            unlabeled_count=counts.get("unlabeled_count", 0) if counts else 0,
-            anomalies_last_hour=counts.get("anomalies_last_hour", 0) if counts else 0, # NEW
-            anomalies_last_24h=counts.get("anomalies_last_24h", 0) if counts else 0,   # NEW
+            total_events=int(counts.get("total_events", 0)) if counts else 0,
+            anomaly_count=int(counts.get("anomaly_count", 0)) if counts else 0,
+            normal_count=int(counts.get("normal_count", 0)) if counts else 0,
+            labeled_count=int(counts.get("labeled_count", 0)) if counts else 0,
+            unlabeled_count=int(counts.get("unlabeled_count", 0)) if counts else 0,
+            anomalies_last_hour=int(counts.get("anomalies_last_hour", 0)) if counts else 0, # NEW
+            anomalies_last_24h=int(counts.get("anomalies_last_24h", 0)) if counts else 0,   # NEW
             label_distribution=label_distribution
         )
         logging.info(f"Calculated event statistics: {stats}")
@@ -142,7 +142,7 @@ async def get_event_timeseries(db: AsyncSession, interval: str = "hour", hours_a
 
     stmt = select(
         time_bucket_expr,
-        func.sum(case((EventLog.prediction == 1, 1), else_=0)).label("anomaly_count"),
+        func.sum(case((EventLog.ae_anomaly_flag == 1, 1), else_=0)).label("anomaly_count"),
         func.sum(case((EventLog.prediction == 0, 1), else_=0)).label("normal_count")
     ).where(EventLog.timestamp >= start_time) \
      .group_by(time_bucket_expr) \

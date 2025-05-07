@@ -14,13 +14,18 @@ if settings.DATABASE_URL.startswith("sqlite"):
     engine_args["connect_args"] = {"check_same_thread": False}
 
 # Create the asynchronous SQLAlchemy engine
-engine = create_async_engine(settings.DATABASE_URL, **engine_args)
+engine = create_async_engine(
+    settings.DATABASE_URL,
+    **engine_args,
+    pool_size=50,
+    max_overflow=50,
+    pool_timeout=30)
 
 # Create an asynchronous session factory
 AsyncSessionFactory = sessionmaker(
     bind=engine,
     class_=AsyncSession,
-    expire_on_commit=False, # Recommended for FastAPI background tasks
+    expire_on_commit=False,
     autocommit=False,
     autoflush=False,
 )
