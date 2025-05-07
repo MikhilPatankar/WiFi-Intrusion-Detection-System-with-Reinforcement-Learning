@@ -406,80 +406,104 @@ body.sidebar-collapsed .navbar {
 }
 
 /* --- Tables --- */
+/* In custom.css, within or replacing the existing table styles */
+
 .table-container {
-    background-color: var(--card-bg);
+    background-color: var(--card-bg); /* Keep card background */
     border-radius: var(--border-radius);
     border: 1px solid var(--border-color);
     box-shadow: var(--box-shadow);
-    overflow: hidden; /* Needed for border-radius */
-}
-
-.table {
+    overflow: hidden;
+  }
+  
+  .table {
     margin-bottom: 0;
     color: var(--text-color);
-    border-collapse: separate; /* Allows spacing/styling between rows */
+    background-color: var(--card-bg);  /* Or, e.g., #181e28 for a bit darker than card */
+    border-collapse: separate;
     border-spacing: 0;
-}
-
-.table thead th {
-    background-color: rgba(var(--body-bg), 0.4); /* Match card header */
-    border-bottom: 2px solid var(--border-color); /* Stronger header separator */
+    width: 100%; /* Ensure table takes full width */
+  }
+  
+  
+  .table thead th {
+    background-color: var(--hover-bg); /* Slightly darker header */
+    border-bottom: 2px solid var(--primary-color); /* Use primary color for emphasis */
     border-top: none;
     font-weight: 600;
-    font-size: 0.8rem;
+    font-size: 0.9rem; /* Slightly smaller header text */
     text-transform: uppercase;
-    letter-spacing: 0.6px; /* Adjust spacing */
-    color: var(--text-muted);
-    padding: 0.85rem 1rem; /* Adjust padding */
+    letter-spacing: 0.6px;
+    color: #fff; /* White header text */
+    padding: 0.7rem 1rem; /* Adjust padding */
     white-space: nowrap;
-    position: sticky; /* Make header sticky if table scrolls */
+    position: sticky;
     top: 0;
     z-index: 10;
-}
-
-.table tbody tr {
-    border-top: 1px solid var(--border-color);
+  }
+  
+  .table tbody tr {
+    background-color: #1a2029; /* Remove default row background */
+    border-top: 1px solid var(--border-color); /* Keep subtle border */
     transition: background-color var(--transition-speed) var(--transition-func);
-}
-
-.table tbody tr:first-child {
-    border-top: none;
-}
-
-.table-hover>tbody>tr:hover>* {
-    background-color: var(--hover-bg);
+  }
+  
+  .table tbody tr:first-child {
+    border-top: none; /* Remove top border of first row */
+  }
+  
+  .table tbody tr:hover {
+    background-color: rgba(var(--primary-rgb), 0.1); /* Subtle primary highlight on hover */
     color: #fff; /* Brighter text on hover */
-}
-
-.table td,
-.table th {
+  }
+  
+  
+  .table td,
+  .table th {
     vertical-align: middle;
-    padding: 0.85rem 1rem; /* Consistent padding */
+    padding: 0.7rem 1rem;
     font-size: 0.9rem;
-}
-
-.table .btn-sm {
-    padding: 0.3rem 0.7rem; /* Adjust button padding */
-    font-size: 0.8rem;
-    border-radius: var(--border-radius-sm);
-}
-
-.table .badge {
-    font-weight: 500;
+  }
+  
+  .table .btn-sm {
+    padding: 0.25rem 0.6rem; /* Smaller button padding */
     font-size: 0.75rem;
-    padding: .4em .7em; /* Adjust badge padding */
+    border-radius: var(--border-radius-sm);
+  }
+  
+  .table .badge {
+    font-weight: 500;
+    font-size: 0.7rem; /* Slightly smaller badges */
+    padding: 0.3em 0.6em;
     border: 1px solid transparent;
-    box-shadow: var(--box-shadow-sm); /* Add shadow to badges */
-}
-
-.table .font-monospace {
+    box-shadow: var(--box-shadow-sm);
+  }
+  
+  .table .font-monospace {
     font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     color: var(--text-muted);
-    background-color: rgba(var(--body-bg), 0.3); /* Subtle background for mono */
+    background-color: rgba(var(--body-bg), 0.3);
     padding: 0.1em 0.3em;
     border-radius: 3px;
-    font-size: 0.85em;
-}
+    font-size: 0.8em;
+  }
+  
+  /* Alternating Row Colors for Elegance */
+  .table tbody tr:nth-child(even) {
+    /* Remove or comment out this line: */
+    /* background-color: rgba(var(--body-bg), 0.2);  */
+    background-color: #181e28; /* Or the same color as the main table bg */
+  }
+  
+  
+  /* Subtle border between columns */
+  .table td {
+      border-right: 1px solid rgba(var(--border-color), 0.5); /* Half opacity border */
+  }
+  .table td:last-child {
+      border-right: none; /* No border on last cell */
+  }
+  
 
 /* Custom badge colors - Enhanced */
 .badge.bg-success-subtle {
@@ -704,6 +728,7 @@ footer {
     color: var(--secondary-color);
     opacity: 0.6;
 }
+
 /* --- Typography Enhancements --- */
 
 /* Enhance visibility of key descriptive text and labels */

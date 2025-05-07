@@ -37,7 +37,7 @@ class AttackTypeRead(BaseModel):
     is_active: bool
     created_by: Optional[str] = None
     creation_timestamp: datetime.datetime
-    class Config: orm_mode = True
+    class Config: orm_mode = True; from_attributes = True
 
 class EventStats(BaseModel):
     """Response model for event statistics."""

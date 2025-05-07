@@ -35,6 +35,7 @@
                         <th scope="col">Timestamp</th>
                         <th scope="col">UID</th>
                         <th scope="col">Prediction</th> {# Prediction made by RL model #}
+                        <th scope="col">Anomaly</th> {# Anomaly by AutoEncoder #}
                         <th scope="col">Label</th> {# Human label if provided #}
                         <th scope="col">Details</th> {# Link/Button to view full packet info #}
                     </tr>
@@ -74,6 +75,10 @@
                                 id="packetInfoPrediction"></span></p>
                     </div>
                     <div class="col-md-6">
+                        <p class="mb-1"><small class="text-muted">Anomaly:</small><br><span
+                                id="anomalyPrediction"></span></p>
+                    </div>
+                    <div class="col-md-6">
                         <p class="mb-1"><small class="text-muted">Human Label:</small><br><span
                                 id="packetInfoLabel"></span></p>
                     </div>
@@ -104,6 +109,7 @@
     const packetInfoUid = document.getElementById('packetInfoUid');
     const packetInfoTimestamp = document.getElementById('packetInfoTimestamp');
     const packetInfoPrediction = document.getElementById('packetInfoPrediction');
+    const anomalyPrediction = document.getElementById('anomalyPrediction');
     const packetInfoLabel = document.getElementById('packetInfoLabel');
     const packetInfoFeatures = document.getElementById('packetInfoFeatures');
 
@@ -121,20 +127,23 @@
     function renderLogTable(events) {
         if (!tableBody) return;
         tableBody.innerHTML = '';
-        if (!events || events.length === 0) { tableBody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-5">No events found for this page.</td></tr>'; return; }
+        if (!events || events.length === 0) { tableBody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-5">No events found for this page.</td></tr>'; return; } // Corrected colspan
         events.forEach(event => {
             const row = tableBody.insertRow();
             const predictionBadge = event.prediction === 1 ? `<span class="badge bg-danger-subtle text-danger-emphasis prediction-badge">Attack</span>` : `<span class="badge bg-success-subtle text-success-emphasis prediction-badge">Normal</span>`;
+            const anomalyBadge = event.ae_anomaly_flag ? `<span class="badge bg-danger-subtle text-danger-emphasis">Anomaly</span>` : `<span class="badge bg-success-subtle text-success-emphasis">Normal</span>`; // Added anomaly badge
             const labelBadge = event.human_label ? `<span class="badge bg-info-subtle text-info-emphasis label-badge">${event.human_label}</span>` : `<span class="badge bg-secondary-subtle text-secondary-emphasis label-badge">N/A</span>`;
             row.innerHTML = `
                     <td><small>${formatTimestamp(event.timestamp)}</small></td>
                     <td><small class="font-monospace" title="${event.event_uid}">${event.event_uid ? event.event_uid.substring(0, 12) + '...' : 'N/A'}</small></td>
                     <td>${predictionBadge}</td>
+                    <td>${anomalyBadge}</td> <!-- Added anomaly badge to table -->
                     <td>${labelBadge}</td>
                     <td><button class="btn btn-sm btn-outline-secondary" onclick="showPacketInfo('${event.event_uid}')"><i class="bi bi-eye me-1"></i>View</button></td>
                 `;
         });
     }
+
 
     function renderPagination() {
         if (!paginationControls || totalEvents <= eventsPerPage) {
@@ -208,6 +217,16 @@
         packetInfoUid.textContent = event.event_uid;
         packetInfoTimestamp.textContent = formatTimestamp(event.timestamp);
         packetInfoPrediction.textContent = event.prediction === 1 ? 'Attack' : 'Normal';
+        anomalyPrediction.textContent = event.ae_anomaly_flag ? 'True' : 'False';
+        // Add a class for styling
+        if (event.ae_anomaly_flag) {
+            anomalyPrediction.classList.add('anomaly-true');
+            anomalyPrediction.classList.remove('anomaly-false');
+        } else {
+            anomalyPrediction.classList.add('anomaly-false');
+            anomalyPrediction.classList.remove('anomaly-true');
+        }
+
         packetInfoLabel.textContent = event.human_label || 'N/A';
         try { packetInfoFeatures.textContent = JSON.stringify(event.features_data, null, 2); } catch (e) { packetInfoFeatures.textContent = "Error displaying features."; }
         // packetInfoParsed.textContent = "Parsed packet details would go here if available from API...";

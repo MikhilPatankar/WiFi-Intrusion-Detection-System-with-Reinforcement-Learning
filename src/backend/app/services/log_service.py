@@ -57,8 +57,63 @@ async def update_event_label(db: AsyncSession, label_data: EventLabel) -> EventL
         db_event.human_label = label_data.human_label; db_event.labeling_timestamp = datetime.datetime.now()
         db.add(db_event); await db.commit(); await db.refresh(db_event)
         logging.info(f"Updated label for event UID {db_event.event_uid} to '{label_data.human_label}'")
+
+        # --- ADDED: Update/Add Attack Type ---
+        await update_attack_types(db, label_data)  # Call the new function
+
         return db_event
     except Exception as e: await db.rollback(); logging.error(f"Error updating label for event {label_data.event_uid}: {e}", exc_info=True); raise
+
+async def update_attack_types(db: AsyncSession, label_data: EventLabel) -> bool:
+    """
+    Checks if a label exists as an attack type. If not, adds it as a new attack type.
+
+    Args:
+        db (AsyncSession): Database session.
+        label_data (EventLabel): Contains the event UID and the human label.
+
+    Returns:
+        bool: True if a new attack type was added, False otherwise (including errors).
+    """
+    try:
+        # 1. Get all attack types (including inactive for now, to check for duplicates)
+        existing_types = await get_attack_types(db, include_inactive=True)
+
+        # Check if the label (lowercased) already exists, ignoring case for comparison
+        label_lower = label_data.human_label.lower()
+        if any(t.type_name.lower() == label_lower for t in existing_types):
+            logging.info(f"Label '{label_data.human_label}' (case-insensitive) already exists as an attack type. No update needed.")
+            return False  # No new type added
+
+        # 2. If it doesn't exist, prepare and add a new one
+        logging.info(f"Label '{label_data.human_label}' is a new attack type. Adding to database.")
+
+        # Generate a new type_id (find max and increment)
+        max_id = max((t.type_id for t in existing_types), default=0)
+        new_type_id = max_id + 1
+
+        # Create a new AttackTypes object (using lowercase for consistency in DB)
+        new_type = AttackTypes(
+            type_id=new_type_id,
+            type_name=label_data.human_label,  # Store the label as provided, case-sensitive
+            description=f"Automatically added attack type based on human label: {label_data.human_label}",
+            is_active=True,
+            created_by="system", # Or get from current user if available
+            creation_timestamp=datetime.datetime.now(datetime.timezone.utc)
+        )
+
+        # Add and commit to the database
+        db.add(new_type)
+        await db.commit()
+        await db.refresh(new_type)
+
+        logging.info(f"Added new attack type: '{new_type.type_name}' (ID: {new_type.type_id})")
+        return True  # New type added
+
+    except Exception as e:
+        await db.rollback()  # Rollback in case of errors
+        logging.error(f"Error while updating/adding attack types: {e}", exc_info=True)
+        return False # Indicate failure
 
 
 async def get_event_statistics(db: AsyncSession) -> EventStats:
