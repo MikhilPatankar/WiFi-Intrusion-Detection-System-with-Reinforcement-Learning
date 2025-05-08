@@ -94,8 +94,6 @@ class Settings(BaseSettings):
     VERSION: str = "0.1.0"
     DESCRIPTION: str = "API for WIDS Hybrid Detection (RL+AE) & Logging"
 
-    WIDS_API_BASE_URL = "http://127.0.0.1:80"
-
     # Database Configuration
     DATABASE_URL: str = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
 
