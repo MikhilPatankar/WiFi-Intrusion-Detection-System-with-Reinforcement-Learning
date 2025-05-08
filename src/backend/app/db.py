@@ -35,6 +35,8 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionFactory() as session:
         try:
             yield session
+        except Exception:
+            await session.rollback()
         finally:
             await session.close()
 

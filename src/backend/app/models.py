@@ -58,9 +58,11 @@ class EventLogBase(BaseModel):
     timestamp: datetime.datetime = Field(default_factory=datetime.datetime.now)
     features_data: list # Original unscaled features
     prediction: int # RL Prediction
+    rl_confidence: Optional[float] = None
     initial_reward: Optional[float] = None
     # AE/Hybrid Fields
     ae_anomaly_flag: Optional[bool] = None
+    ae_confidence: Optional[float] = None
     reconstruction_error: Optional[float] = None
     final_status: Optional[str] = None
     # Labeling Fields

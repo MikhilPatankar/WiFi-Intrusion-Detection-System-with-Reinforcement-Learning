@@ -220,6 +220,7 @@ async def run_hybrid_prediction(features: NetworkStateFeatures) -> Dict[str, Any
         "reconstruction_error": None,
         "scaled_features": None
     }
+    
     try:
         raw_vector = np.array(features.feature_vector).reshape(1, -1)
         if raw_vector.shape[1] != feature_scaler.n_features_in_:

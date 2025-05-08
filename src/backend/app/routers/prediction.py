@@ -42,9 +42,12 @@ async def predict_network_state_hybrid(
             "timestamp": datetime.datetime.now(datetime.timezone.utc),
             "features_data": features.feature_vector, # Original unscaled features
             "prediction": prediction_results["rl_prediction"],
+            "rl_confidence": prediction_results["rl_confidence"],
             "ae_anomaly_flag": prediction_results["ae_anomaly_flag"],
+            "ae_confidence": prediction_results["ae_confidence"],
             "reconstruction_error": prediction_results["reconstruction_error"],
             "final_status": prediction_results["final_status"],
+            "type_id": prediction_results["attack_id"],
             "initial_reward": None
         }
         background_tasks.add_task(background_log_event, db, event_data_to_log)

@@ -26,8 +26,12 @@ async def lifespan(app: FastAPI):
     if ae_thresh_dir: os.makedirs(ae_thresh_dir, exist_ok=True)
 
     # Load Dependencies (RL, Scaler, AE, Threshold)
-    all_loaded = prediction_service.load_dependencies()
-    if not all_loaded: logging.critical("CRITICAL ERROR: Failed to load essential models/scaler.")
+    logging.info("Application startup: Loading dependencies...")
+    success = await prediction_service.load_dependencies()
+    if success:
+        logging.info("Dependencies loaded successfully.")
+    else:
+        logging.error("Failed to load some dependencies. Application might be impaired.")
 
     await create_db_and_tables(); # Init DB
     await broadcast.connect(); logging.info("Broadcaster connected.") # Connect Broadcaster
@@ -46,16 +50,6 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 app.include_router(prediction.router)
 app.include_router(logging_router.router)
 app.include_router(attack_types_router.router)
-
-
-@app.lifespan("startup")
-async def startup_event():
-    logging.info("Application startup: Loading dependencies...")
-    success = await prediction_service.load_dependencies()
-    if success:
-        logging.info("Dependencies loaded successfully.")
-    else:
-        logging.error("Failed to load some dependencies. Application might be impaired.")
 
 @app.get("/", tags=["Root"])
 async def read_root(): return {"message": f"{settings.PROJECT_NAME} is running!"}

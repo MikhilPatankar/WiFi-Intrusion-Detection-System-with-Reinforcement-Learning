@@ -32,8 +32,6 @@ else:
     try:
         custom_objects = {
             'mse': tf.keras.losses.MeanSquaredError()
-            # Or potentially: 'mse': tf.keras.metrics.MeanSquaredError()
-            # Or even the functional version: 'mse': tf.keras.losses.mean_squared_error
         }
         ae_model = keras.models.load_model(ae_model_path, custom_objects=custom_objects)
         # Optional: Warm-up prediction
