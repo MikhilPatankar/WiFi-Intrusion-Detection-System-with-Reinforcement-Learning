@@ -6,7 +6,7 @@ from app.db import create_db_and_tables
 from app.services import prediction_service # Import prediction service
 from app.broadcast import broadcast
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -47,6 +47,15 @@ app.include_router(prediction.router)
 app.include_router(logging_router.router)
 app.include_router(attack_types_router.router)
 
+
+@app.lifespan("startup")
+async def startup_event():
+    logging.info("Application startup: Loading dependencies...")
+    success = await prediction_service.load_dependencies()
+    if success:
+        logging.info("Dependencies loaded successfully.")
+    else:
+        logging.error("Failed to load some dependencies. Application might be impaired.")
 
 @app.get("/", tags=["Root"])
 async def read_root(): return {"message": f"{settings.PROJECT_NAME} is running!"}
