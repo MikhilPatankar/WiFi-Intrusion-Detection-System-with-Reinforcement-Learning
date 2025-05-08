@@ -62,9 +62,27 @@ FINETUNE_REWARD_CONFIG = {
     'Default_Mismatch': -15.0  # Penalty for confusing attacks
 }
 
-# --- Database Setup ---
-engine_args = {"echo": False}; engine = create_async_engine(DATABASE_URL, **engine_args); AsyncSessionFactory = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False, autocommit=False, autoflush=False)
+engine_args = {"echo": False} # Set echo=True for SQL logging
+if DATABASE_URL.startswith("sqlite"):
+    engine_args["connect_args"] = {"check_same_thread": False}
 
+# --- Database Setup ---
+# Create the asynchronous SQLAlchemy engine
+engine = create_async_engine(
+    DATABASE_URL,
+    **engine_args,
+    pool_size=50,
+    max_overflow=50,
+    pool_timeout=30)
+
+# Create an asynchronous session factory
+AsyncSessionFactory = sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
+)
 # --- Helper Functions ---
 
 def fetch_current_attack_types(api_url: str) -> Dict[str, int]:
